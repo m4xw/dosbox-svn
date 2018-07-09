@@ -112,7 +112,7 @@ SOURCES_CXX := \
 	$(CORE_DIR)/src/hardware/serialport/softmodem.cpp \
 	$(CORE_DIR)/src/hardware/serialport/misc_util.cpp \
 	$(CORE_DIR)/src/hardware/serialport/nullmodem.cpp \
-	$(CORE_DIR)/libretro/dosbox.cpp \
+	$(CORE_DIR)/src/dosbox.cpp \
 	$(CORE_DIR)/libretro/render.cpp \
 	$(CORE_DIR)/libretro/render_scalers.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp \
@@ -130,10 +130,8 @@ SOURCES_C += $(LIBRETRO_COMM_DIR)/file/retro_dirent.c \
 				 $(LIBRETRO_COMM_DIR)/file/retro_stat.c
 endif
 
-ifneq ($(platform),win)
-
-
 #dynarec options
+
 ifneq (,$(filter $(platform),unix osx))
 COMMONFLAGS += -DC_HAVE_MPROTECT="1"
 endif
@@ -143,9 +141,11 @@ ifeq ($(WITH_DYNAREC), arm)
 else ifeq ($(WITH_DYNAREC), oldarm)
 	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV4LE"
 else ifeq ($(WITH_DYNAREC), x86_64)
-	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
+	ifeq ($(platform),win)
+		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
+	endif
 else ifeq ($(WITH_DYNAREC), x86)
-	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86"
+	COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
 else ifeq ($(WITH_DYNAREC), ppc)
 	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="POWERPC"
 else ifeq ($(WITH_DYNAREC), mips)
@@ -153,8 +153,6 @@ else ifeq ($(WITH_DYNAREC), mips)
 	#the mips dynarec wont compile but nothing new uses mips anyway(just the old psp)
 endif
 
-
-endif
 
 ifeq ($(WANT_FLUIDSYNTH), 1)
 	COMMONFLAGS += -DC_FLUIDSYNTH

@@ -88,6 +88,19 @@ void retro_set_input_state(retro_input_state_t cb) { input_cb = cb; }
 
 char buf[12][PATH_MAX_LENGTH];
 
+bool change_dosbox_var(std::string section_string, std::string var_string, std::string val_string)
+{
+    Section* section = control->GetSection(section_string);
+    Section_prop* secprop=(Section_prop *)section;
+    if (secprop)
+    {
+        std::string inputline = var_string + "=" + val_string;
+        bool change_success = section->HandleInputline(inputline.c_str());
+        section->ExecuteInit(false);
+    }
+}
+
+
 static struct retro_variable vars[] = {
    { "dosbox_machine_type", "Machine type; vgaonly|svga_s3|svga_et3000|svga_et4000|svga_paradise|hercules|cga|tandy|pcjr|ega" },
    { "dosbox_emulated_mouse", "Gamepad emulated mouse; enable|disable" },
@@ -274,8 +287,7 @@ void check_variables()
    if(update_cycles)
    {
       int cycles = cycles_0 + cycles_1 + cycles_2 + cycles_3;
-
-      CPU_CycleMax=cycles;
+      change_dosbox_var("cpu", "cycles", "10");
    }
    update_cycles = false;
 
