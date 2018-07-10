@@ -1225,7 +1225,7 @@ public:
 						Bit8u dummy;
 						if (!DOS_MakeName(tmp, fullname, &dummy) || strncmp(Drives[dummy]->GetInfo(),"local directory",15)) {
 							WriteOut(MSG_Get("PROGRAM_IMGMOUNT_NON_LOCAL_DRIVE"));
-							return;
+							/* return; */
 						}
 
 						localDrive *ldp = dynamic_cast<localDrive*>(Drives[dummy]);

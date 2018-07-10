@@ -28,32 +28,51 @@ TARGET_NAME := dosbox_svn
 
 # system platform
 system_platform = unix
-ifeq ($(shell uname -a),)
-EXE_EXT = .exe
+ifneq ($(findstring MINGW,$(shell uname -s)),)
+	EXE_EXT = .exe
 	system_platform = win
+	ifneq ($(findstring MINGW32,$(shell uname -s)),)
+		WITH_DYNAREC=x86
+	else ifneq ($(findstring MINGW64,$(shell uname -s)),)
+		WITH_DYNAREC=x86_64
+	endif
 else ifneq ($(findstring Darwin,$(shell uname -a)),)
 	system_platform = osx
-else ifneq ($(findstring MINGW,$(shell uname -a)),)
-	system_platform = win
+else ifneq ($(findstring Linux,$(shell uname -s)),)
+	ifneq ($(findstring i686,$(shell uname -a)),)
+		WITH_DYNAREC=x86
+	else ifneq ($(findstring x86_64,$(shell uname -a)),)
+		WITH_DYNAREC=x86_64
+	endif
 endif
 
-ifeq ($(firstword $(filter x86_64,$(UNAME))),x86_64)
-	WITH_DYNAREC=x86_64
-else ifeq ($(firstword $(filter amd64,$(UNAME))),amd64)
-	WITH_DYNAREC=x86_64
-else ifeq ($(firstword $(filter amd64,$(UNAME))),x86)
-	WITH_DYNAREC=x86
+ifneq (,$(filter $(platform),unix osx))
+	COMMONFLAGS += -DC_HAVE_MPROTECT="1"
+endif
+
+ifeq ($(WITH_DYNAREC), arm)
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV7LE"
+else ifeq ($(WITH_DYNAREC), oldarm)
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV4LE"
+else ifeq ($(WITH_DYNAREC), x86_64)
+	ifneq ($(platform),win)
+		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
+	endif
+else ifeq ($(WITH_DYNAREC), x86)
+	COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
+else ifeq ($(WITH_DYNAREC), ppc)
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="POWERPC"
+else ifeq ($(WITH_DYNAREC), mips)
+	#COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="MIPSEL"
 endif
 
 ifeq ($(platform), unix)
 	TARGET := $(TARGET_NAME)_libretro.so
 	LDFLAGS += -shared -Wl,--version-script=link.T
-
 	fpic = -fPIC
 else ifeq ($(platform), osx)
 	TARGET := $(TARGET_NAME)_libretro.dylib
-	LDFLAGS += -dynamiclib
-
+	LDFLAGS += -dynamiclib -lSDL -lsdl_net
 	fpic = -fPIC
 	ifeq ($(arch),ppc)
 		COMMONFLAGS += -DBLARGG_BIG_ENDIAN=1 -D__ppc__
@@ -146,7 +165,7 @@ else ifeq ($(platform), vita)
 	AR = arm-vita-eabi-ar$(EXE_EXT)
 	WITH_DYNAREC = arm
 	COMMONFLAGS += -DVITA
-	COMMONFLAGS += -mthumb -mcpu=cortex-a9 -mfloat-abi=hard -ftree-vectorize  -ffast-math -fsingle-precision-constant -funroll-loops
+	COMMONFLAGS += -mthumb -mcpu=cortex-a9 -mfloat-abi=hard -ftree-vectorize -ffast-math -fsingle-precision-constant -funroll-loops
 	COMMONFLAGS += -mword-relocations
 	COMMONFLAGS += -fno-optimize-sibling-calls
 	STATIC_LINKING = 1
@@ -195,9 +214,9 @@ else ifeq ($(platform), emscripten)
 	COMMONFLAGS += -DEMSCRIPTEN
 
 else
-	CXXFLAGS += -mno-ms-bitfields
+	COMMONFLAGS += -mno-ms-bitfields
 	TARGET := $(TARGET_NAME)_libretro.dll
-	LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=link.T -lwinmm -Wl,-Bstatic `sdl-config --static-libs` -lsdl_net -liphlpapi -lws2_32 -Wl,-Bdynamic
+	LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=link.T -lwinmm -Wl,-Bstatic `sdl-config --static-libs` -lsdl_net -Wl,-Bdynamic -liphlpapi -lws2_32
 endif
 
 ifeq ($(DEBUG), 1)

@@ -31,6 +31,7 @@
 #include "mouse.h"
 #include "setup.h"
 #include "serialport.h"
+#include "libretro.h"
 #include <time.h>
 
 #if defined(DB_HAVE_CLOCK_GETTIME) && ! defined(WIN32)
@@ -989,7 +990,7 @@ static Bitu Default_IRQ_Handler(void) {
 
 static Bitu Reboot_Handler(void) {
 	// switch to text mode, notify user (let's hope INT10 still works)
-	const char* const text = "\n\n   Reboot requested, quitting now.";
+	const char* const text = "\n\n   Reboot unsuppoted";
 	reg_ax = 0;
 	CALLBACK_RunRealInt(0x10);
 	reg_ah = 0xe;
@@ -1000,8 +1001,8 @@ static Bitu Reboot_Handler(void) {
 	}
 	LOG_MSG(text);
 	double start = PIC_FullIndex();
-	while((PIC_FullIndex()-start)<3000) CALLBACK_Idle();
-	throw 1;
+	/*while((PIC_FullIndex()-start)<3000) CALLBACK_Idle();
+	throw 1;*/
 	return CBRET_NONE;
 }
 
