@@ -1,6 +1,6 @@
 DEBUG=0
 GIT_VERSION := " $(shell git rev-parse --short HEAD)"
-SVN_VERSION := " $(shell git svn log --limit 1 | grep "|" | cut --fields=1 --delimiter=" ")"
+SVN_VERSION := " $(shell cat svn)"
 
 UNAME=$(shell uname -a)
 
@@ -38,32 +38,19 @@ ifneq ($(findstring MINGW,$(shell uname -s)),)
 	endif
 else ifneq ($(findstring Darwin,$(shell uname -a)),)
 	system_platform = osx
-else ifneq ($(findstring Linux,$(shell uname -s)),)
-	ifneq ($(findstring i686,$(shell uname -a)),)
-		WITH_DYNAREC=x86
-	else ifneq ($(findstring x86_64,$(shell uname -a)),)
-		WITH_DYNAREC=x86_64
+
+ifeq ($(platform),unix)
+	else ifneq ($(findstring Linux,$(shell uname -s)),)
+		ifneq ($(findstring i686,$(shell uname -a)),)
+			WITH_DYNAREC=x86
+		else ifneq ($(findstring x86_64,$(shell uname -a)),)
+			WITH_DYNAREC=x86_64
+		endif
 	endif
 endif
 
 ifneq (,$(filter $(platform),unix osx))
 	COMMONFLAGS += -DC_HAVE_MPROTECT="1"
-endif
-
-ifeq ($(WITH_DYNAREC), arm)
-	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV7LE"
-else ifeq ($(WITH_DYNAREC), oldarm)
-	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV4LE"
-else ifeq ($(WITH_DYNAREC), x86_64)
-	ifneq ($(platform),win)
-		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
-	endif
-else ifeq ($(WITH_DYNAREC), x86)
-	COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
-else ifeq ($(WITH_DYNAREC), ppc)
-	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="POWERPC"
-else ifeq ($(WITH_DYNAREC), mips)
-	#COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="MIPSEL"
 endif
 
 ifeq ($(platform), unix)
@@ -203,26 +190,32 @@ else ifeq ($(platform), wiiu)
 	CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
 	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
 	AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-	COMMONFLAGS += -DGEKKO -DWIIU -DHW_RVL -mwup -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__ -DMSB_FIRST -DWORDS_BIGENDIAN=1
+	COMMONFLAGS += -DGEKKO -DWIIU -DHW_RVL -mwup -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__ -DMSB_FIRST -DWORDS_BIGENDIAN=1 -I./deps/include/
 	COMMONFLAGS += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int
+	WITH_EMBEDDED_SDL = 1
 	STATIC_LINKING = 1
-	WITH_DYNAREC=
+	WITH_DYNAREC =
 
 else ifeq ($(platform), emscripten)
 	TARGET := $(TARGET_NAME)_libretro_$(platform).bc
 	STATIC_LINKING = 1
 	COMMONFLAGS += -DEMSCRIPTEN
-
+	WITH_EMBEDDED_SDL = 1
 else
 	COMMONFLAGS += -mno-ms-bitfields
+	WITH_IPX := 1
 	TARGET := $(TARGET_NAME)_libretro.dll
 	LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=link.T -lwinmm -Wl,-Bstatic `sdl-config --static-libs` -lsdl_net -Wl,-Bdynamic -liphlpapi -lws2_32
 endif
 
 ifeq ($(DEBUG), 1)
-COMMONFLAGS += -O0 -g
+	COMMONFLAGS += -O0 -g
 else
-COMMONFLAGS += -O3 -DNDEBUG -DGIT_VERSION=\"$(GIT_VERSION)\" -DSVN_VERSION=\"$(SVN_VERSION)\" -DC_IPX
+	COMMONFLAGS += -O3 -DNDEBUG -DGIT_VERSION=\"$(GIT_VERSION)\" -DSVN_VERSION=\"$(SVN_VERSION)\"
+endif
+
+ifeq ($(WITH_IPX), 1)
+	COMMONFLAGS += -DC_IPX
 endif
 
 CORE_DIR    := ..

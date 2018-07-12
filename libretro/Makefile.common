@@ -59,8 +59,6 @@ SOURCES_CXX := \
 	$(CORE_DIR)/src/hardware/gus.cpp \
 	$(CORE_DIR)/src/hardware/hardware.cpp \
 	$(CORE_DIR)/src/hardware/iohandler.cpp \
-	$(CORE_DIR)/src/hardware/ipx.cpp \
-	$(CORE_DIR)/src/hardware/ipxserver.cpp \
 	$(CORE_DIR)/src/hardware/joystick.cpp \
 	$(CORE_DIR)/src/hardware/keyboard.cpp \
 	$(CORE_DIR)/src/hardware/memory.cpp \
@@ -123,6 +121,45 @@ SOURCES_CXX := \
 	$(CORE_DIR)/src/hardware/mame/saa1099.cpp \
 	$(CORE_DIR)/src/hardware/mame/sn76496.cpp \
 	$(CORE_DIR)/src/hardware/mame/ymf262.cpp \
+
+ifeq ($(WITH_EMBEDDED_SDL), 1)
+SOURCES_C += \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_syscond.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_sysmutex.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_syssem.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_systhread.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/SDL_thread.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/timer/dummy/SDL_systimer.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/timer/SDL_timer.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/cdrom/dummy/SDL_syscdrom.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/cdrom/SDL_cdrom.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/SDL_error.c
+endif
+
+
+ifeq ($(WITH_DYNAREC), arm)
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV7LE"
+else ifeq ($(WITH_DYNAREC), arm64)
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV8LE" -DC_UNALIGNED_MEMORY="1"
+else ifeq ($(WITH_DYNAREC), oldarm)
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV4LE"
+else ifeq ($(WITH_DYNAREC), x86_64)
+	ifneq ($(platform),win)
+		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
+	endif
+else ifeq ($(WITH_DYNAREC), x86)
+	COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
+else ifeq ($(WITH_DYNAREC), ppc)
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="POWERPC"
+else ifeq ($(WITH_DYNAREC), mips)
+	#COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="MIPSEL"
+endif
+
+ifeq ($(WITH_IPX), 1)
+SOURCES_CXX += \
+	$(CORE_DIR)/src/hardware/ipx.cpp \
+	$(CORE_DIR)/src/hardware/ipxserver.cpp
+endif
 
 SOURCES_C := \
 	$(LIBRETRO_COMM_DIR)/libco/libco.c

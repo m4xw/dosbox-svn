@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "libretro.h"
-#include "retrodos.h"
+#include "libretro_dosbox.h"
 
 #include "dosbox.h"
 #include "mapper.h"
@@ -361,6 +361,7 @@ void MAPPER_Init()
 
     if (connected[0] && connected[1])
     {
+        update_dosbox_variable("joystick", "joysticktype", "2axis");
         log_cb(RETRO_LOG_INFO, "Both ports connected, defering to two axis, two button pads\n");
         joytype=JOY_2AXIS;
         JOYSTICK_Enable(0, true);
@@ -436,6 +437,7 @@ void MAPPER_Init()
         log_cb(RETRO_LOG_INFO, "One port connected, enabling gravis gamepad in connected port\n");
         if (connected[0])
         {
+            update_dosbox_variable("joystick", "joysticktype", "4axis");
             log_cb(RETRO_LOG_INFO, "Port 0 connected\n");
             joytype=JOY_4AXIS;
             /* gravis gamepad was a hack basically needs both joytsticks to be enabled to function */
@@ -479,6 +481,7 @@ void MAPPER_Init()
         }
         if (connected[1])
         {
+            update_dosbox_variable("joystick", "joysticktype", "4axis_2");
             log_cb(RETRO_LOG_INFO, "Port 1 connected\n");
             joytype=JOY_4AXIS_2;
             /* gravis gamepad was a hack basically needs both joytsticks to be enabled to function */
@@ -518,6 +521,8 @@ void MAPPER_Init()
             }
         }
     }
+    else
+        update_dosbox_variable("joystick", "joysticktype", "none");
 
     if (emulated_mouse)
     {
