@@ -3,23 +3,38 @@
 Upstream port of DOSBox to libretro.
 
 ### Keeping up-to-date
-To update from upstream follow this procedure:
+Clone the repo from the svn upstream:
 
 ```bash
+git svn clone svn://svn.code.sf.net/p/dosbox/code-0/dosbox/ dosbox-svn
+```
+
+This takes a few hours. Then add a remote for the git repo:
+
+```bash
+cd dosbox-svn
+git remote add origin https://github.com/fr500/dosbox-svn.git --> replace this with your repo URL if you're working in a fork
+git fetch
 git checkout master
 git svn rebase
+```
+
+Switch to libretro branch and work there instead, don't make any changes to master:
+
+```
 git checkout libretro
 git rebase master
 ```
 
-Resolve conflicts if any, and then
+Do your work, resolve conflicts if any, and then:
 ```bash
 git push --force
 ```
 
 ### Compilation
-So far it's compiling only on Windows and Linux.
-Requirements
+So far it's compiling on Windows, Linux, Android and OSX.
+
+####Requirements
 
 - SDL1.2
 - SDL_net
