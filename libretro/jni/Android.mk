@@ -39,8 +39,13 @@ SOURCES_C += \
 COMMONFLAGS += -D__LIBRETRO__ -DFRONTEND_SUPPORTS_RGB565 $(INCFLAGS) -DC_HAVE_MPROTECT="1"
 
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
+SVN_VERSION := " $(shell cat ../svn)"
 ifneq ($(GIT_VERSION)," unknown")
     COMMONFLAGS += -DGIT_VERSION=\"$(GIT_VERSION)\"
+endif
+
+ifneq ($(SVN_VERSION)," unknown")
+    COMMONFLAGS += -DSVN_VERSION=\"$(SVN_VERSION)\"
 endif
 
 include $(CLEAR_VARS)
