@@ -66,7 +66,7 @@ void Cross::GetPlatformConfigDir(std::string& in) {
 #else
 	slash = '/';
 #endif
-	in = retro_save_directory + slash + retro_library_name;
+	in = retro_save_directory;
 #elif WIN32
 	W32_ConfDir(in,false);
 	in += "\\DOSBox";
@@ -81,12 +81,16 @@ void Cross::GetPlatformConfigDir(std::string& in) {
 }
 
 void Cross::GetPlatformConfigName(std::string& in) {
+#ifndef __LIBRETRO__
 #ifdef WIN32
 #define DEFAULT_CONFIG_FILE "dosbox-" VERSION ".conf"
 #elif defined(MACOSX)
 #define DEFAULT_CONFIG_FILE "DOSBox " VERSION " Preferences"
 #else /*linux freebsd*/
 #define DEFAULT_CONFIG_FILE "dosbox-" VERSION ".conf"
+#endif
+#else
+#define DEFAULT_CONFIG_FILE "DOSBox-SVN.conf"
 #endif
 	in = DEFAULT_CONFIG_FILE;
 }
