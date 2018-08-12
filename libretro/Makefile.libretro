@@ -48,25 +48,24 @@ else ifeq ($(platform),osx)
 	WITH_IPX := 1
 endif
 
-# defines for sbcs
-ifeq ($(target), cpi)
-	COMMONFLAGS += -marm -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+# arm
+
+ifeq ($(CORTEX_A7), true)
+	COMMONFLAGS += -marm -mcpu=cortex-a
 	WITH_DYNAREC = arm
-else ifeq ($(target), nintendoc)
-	COMMONFLAGS += -marm -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
-	WITH_DYNAREC = arm
+	ifeq ($(ARM_NEON), true)
+		COMMONFLAGS += -mfpu=neon-vfpv4
+	endif
+endif
+ifeq ($(ARM_HARDFLOAT), true)
+	COMMONFLAGS += -mfloat-abi=hard
 endif
 
 # flags
-ifeq ($(platform), unix)
-	COMMONFLAGS += -DC_HAVE_MPROTECT="1"
-	TARGET := $(TARGET_NAME)_libretro.so
-	LDFLAGS += -shared -Wl,--version-script=link.T
-	fpic = -fPIC
-else ifeq ($(platform), osx)
+ifeq ($(platform), osx)
 	COMMONFLAGS += -DC_HAVE_MPROTECT="1"
 	TARGET := $(TARGET_NAME)_libretro.dylib
-	LDFLAGS += -dynamiclib -lSDL -lsdl_net
+	LDFLAGS += -dynamiclib -lSDL -lSDL_net
 	fpic = -fPIC
 	ifeq ($(arch),ppc)
 		COMMONFLAGS += -DBLARGG_BIG_ENDIAN=1 -D__ppc__
@@ -163,6 +162,11 @@ else ifeq ($(platform), win)
 	COMMONFLAGS += -mno-ms-bitfields
 	TARGET := $(TARGET_NAME)_libretro.dll
 	LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=link.T -lwinmm -Wl,-Bstatic `sdl-config --static-libs` -lsdl_net -Wl,-Bdynamic -liphlpapi -lws2_32
+else
+	COMMONFLAGS += -DC_HAVE_MPROTECT="1"
+	TARGET := $(TARGET_NAME)_libretro.so
+	LDFLAGS += -shared -Wl,--version-script=link.T -lSDL -lSDL_net
+	fpic = -fPIC
 endif
 
 ifeq ($(DEBUG), 1)
