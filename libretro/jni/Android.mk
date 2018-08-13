@@ -1,7 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 CORE_DIR   := $(LOCAL_PATH)/../..
 
-INCFLAGS    := -I$(CORE_DIR)/libretro/deps/include/ -I$(CORE_DIR)/libretro/deps/include/SDL/
+INCFLAGS    := -I$(CORE_DIR)/libretro/deps/include/ -I$(CORE_DIR)/libretro/deps/include/SDL/ -I$(CORE_DIR)/libretro/deps/SDL_net/
 COMMONFLAGS :=
 
 WITH_DYNAREC :=
@@ -21,6 +21,8 @@ else ifeq ($(TARGET_ARCH_ABI), mips64)
     WITH_DYNAREC := mips64
 endif
 
+WITH_IPX := 1
+
 include $(CORE_DIR)/libretro/Makefile.common
 
 SOURCES_C += \
@@ -34,8 +36,12 @@ SOURCES_C += \
     $(CORE_DIR)/libretro/deps/SDL/src/cdrom/dummy/SDL_syscdrom.c \
     $(CORE_DIR)/libretro/deps/SDL/src/cdrom/SDL_cdrom.c \
     $(CORE_DIR)/libretro/deps/SDL/src/SDL_error.c \
+	$(CORE_DIR)/libretro/deps/SDL_net/SDLnet.c \
+	$(CORE_DIR)/libretro/deps/SDL_net/SDLnetTCP.c \
+	$(CORE_DIR)/libretro/deps/SDL_net/SDLnetUDP.c \
+	$(CORE_DIR)/libretro/deps/SDL_net/SDLnetselect.c
 
-COMMONFLAGS += -D__LIBRETRO__ -DFRONTEND_SUPPORTS_RGB565 $(INCFLAGS) -DC_HAVE_MPROTECT="1"
+COMMONFLAGS += -D__LIBRETRO__ -DFRONTEND_SUPPORTS_RGB565 $(INCFLAGS) -DC_HAVE_MPROTECT="1" -DC_IPX
 
 GIT_VERSION := " $(shell git rev-parse --short HEAD || echo unknown)"
 SVN_VERSION := " $(shell cat ../svn)"
