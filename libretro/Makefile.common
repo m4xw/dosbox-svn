@@ -15,7 +15,6 @@ SOURCES_CXX := \
 	$(CORE_DIR)/libretro/libretro_mapper.cpp \
 	$(CORE_DIR)/libretro/libretro_mixer.cpp \
 	$(CORE_DIR)/libretro/libretro.cpp \
-	$(CORE_DIR)/libretro/nonlibc/snprintf.cpp \
 	$(CORE_DIR)/src/cpu/callback.cpp \
 	$(CORE_DIR)/src/cpu/core_dyn_x86.cpp \
 	$(CORE_DIR)/src/cpu/core_dynrec.cpp \
@@ -122,7 +121,7 @@ SOURCES_CXX := \
 	$(CORE_DIR)/src/hardware/mame/fmopl.cpp \
 	$(CORE_DIR)/src/hardware/mame/saa1099.cpp \
 	$(CORE_DIR)/src/hardware/mame/sn76496.cpp \
-	$(CORE_DIR)/src/hardware/mame/ymf262.cpp \
+	$(CORE_DIR)/src/hardware/mame/ymf262.cpp
 
 ifeq ($(WITH_IPX), 1)
 SOURCES_CXX += \
@@ -139,24 +138,42 @@ SOURCES_C += \
 	$(LIBRETRO_COMM_DIR)/file/retro_stat.c
 endif
 
-# bake in sdl (not working yet)
 ifeq ($(WITH_EMBEDDED_SDL), 1)
-SOURCES_C += \
-		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_syscond.c \
-		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_sysmutex.c \
-		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_syssem.c \
-		$(CORE_DIR)/libretro/deps/SDL/src/thread/generic/SDL_systhread.c \
-		$(CORE_DIR)/libretro/deps/SDL/src/thread/SDL_thread.c \
-		$(CORE_DIR)/libretro/deps/SDL/src/timer/dummy/SDL_systimer.c \
-		$(CORE_DIR)/libretro/deps/SDL/src/timer/SDL_timer.c \
+ifeq ($(platform),win)
+	SOURCES_C += \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/win32/SDL_sysmutex.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/win32/SDL_syssem.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/win32/SDL_systhread.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/cdrom/win32/SDL_syscdrom.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/timer/win32/SDL_systimer.c
+	else
+	SOURCES_C += \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/pthread/SDL_syscond.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/pthread/SDL_sysmutex.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/pthread/SDL_syssem.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/pthread/SDL_systhread.c \
 		$(CORE_DIR)/libretro/deps/SDL/src/cdrom/dummy/SDL_syscdrom.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/timer/unix/SDL_systimer.c
+	endif
+	SOURCES_C += \
+		$(CORE_DIR)/libretro/deps/SDL/src/thread/SDL_thread.c \
+		$(CORE_DIR)/libretro/deps/SDL/src/timer/SDL_timer.c \
 		$(CORE_DIR)/libretro/deps/SDL/src/cdrom/SDL_cdrom.c \
-		$(CORE_DIR)/libretro/deps/SDL/src/SDL_error.c
+		$(CORE_DIR)/libretro/deps/SDL/src/SDL_error.c \
+		$(CORE_DIR)/libretro/deps/SDL_net/SDLnet.c \
+		$(CORE_DIR)/libretro/deps/SDL_net/SDLnetTCP.c \
+		$(CORE_DIR)/libretro/deps/SDL_net/SDLnetUDP.c \
+		$(CORE_DIR)/libretro/deps/SDL_net/SDLnetselect.c
+	INCFLAGS += \
+		-I$(CORE_DIR)/libretro/deps/include/ \
+		-I$(CORE_DIR)/libretro/deps/include/SDL/ \
+		-I$(CORE_DIR)/libretro/deps/SDL_net/
 endif
+
 
 # dynarec flags
 ifeq ($(WITH_DYNAREC), arm)
-	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV7LE"
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV7LE" -DC_UNALIGNED_MEMORY="1"
 else ifeq ($(WITH_DYNAREC), arm64)
 	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV8LE" -DC_UNALIGNED_MEMORY="1"
 else ifeq ($(WITH_DYNAREC), oldarm)
@@ -167,7 +184,11 @@ else ifeq ($(WITH_DYNAREC), x86_64)
 		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
 	endif
 else ifeq ($(WITH_DYNAREC), x86)
-	COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
+	ifeq ($(platform),win)
+		COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
+	else
+		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86"
+	endif
 else ifeq ($(WITH_DYNAREC), ppc)
 	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="POWERPC"
 else ifeq ($(WITH_DYNAREC), mips)

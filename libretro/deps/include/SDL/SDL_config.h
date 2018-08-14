@@ -40,6 +40,8 @@
 #include "SDL_config_os2.h"
 #elif defined(ANDROID)
 #include "SDL_config_android.h"
+#elif defined(UNIX_PORTABLE)
+#include "SDL_config_unix_portable.h"
 #else
 #include "SDL_config_minimal.h"
 #endif /* platform config */

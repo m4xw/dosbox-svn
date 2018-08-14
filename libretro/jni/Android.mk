@@ -36,10 +36,13 @@ SOURCES_C += \
     $(CORE_DIR)/libretro/deps/SDL/src/cdrom/dummy/SDL_syscdrom.c \
     $(CORE_DIR)/libretro/deps/SDL/src/cdrom/SDL_cdrom.c \
     $(CORE_DIR)/libretro/deps/SDL/src/SDL_error.c \
-	$(CORE_DIR)/libretro/deps/SDL_net/SDLnet.c \
-	$(CORE_DIR)/libretro/deps/SDL_net/SDLnetTCP.c \
-	$(CORE_DIR)/libretro/deps/SDL_net/SDLnetUDP.c \
-	$(CORE_DIR)/libretro/deps/SDL_net/SDLnetselect.c
+    $(CORE_DIR)/libretro/deps/SDL_net/SDLnet.c \
+    $(CORE_DIR)/libretro/deps/SDL_net/SDLnetTCP.c \
+    $(CORE_DIR)/libretro/deps/SDL_net/SDLnetUDP.c \
+    $(CORE_DIR)/libretro/deps/SDL_net/SDLnetselect.c
+
+SOURCES_CXX +=\
+	$(CORE_DIR)/libretro/nonlibc/snprintf.cpp
 
 COMMONFLAGS += -D__LIBRETRO__ -DFRONTEND_SUPPORTS_RGB565 $(INCFLAGS) -DC_HAVE_MPROTECT="1" -DC_IPX
 

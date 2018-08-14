@@ -94,7 +94,7 @@
 #define SDL_AUDIO_DRIVER_DUMMY	1
 
 /* Enable various cdrom drivers */
-#define SDL_CDROM_MACOSX	1
+#define SDL_CDROM_DUMMY	 1
 
 /* Enable various input drivers */
 #define SDL_JOYSTICK_IOKIT	1
