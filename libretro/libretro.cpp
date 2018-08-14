@@ -75,6 +75,7 @@ bool connected[16];
 bool emulated_mouse;
 static bool use_core_options;
 static bool adv_core_options;
+bool disney_init;
 
 /* directories */
 std::string retro_save_directory;
@@ -418,7 +419,15 @@ void check_variables()
         var.key = "dosbox_svn_disney";
         var.value = NULL;
         if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        {
             update_dosbox_variable("speaker", "disney", var.value);
+            if (!strcmp(var.value,"true"))
+                disney_init = true;
+            else
+                disney_init = false;
+        }
+
+;
     }
 }
 

@@ -17,26 +17,34 @@ endif
 LIBRETRO_DIR := libretro
 TARGET_NAME  := dosbox_svn
 WITH_DYNAREC :=
+WITH_EMBEDDED_SDL := 0
 
 # try to guess the dynarec based on the host system, unreliable
 ifeq ($(platform),win)
 	ifneq ($(findstring MINGW32,$(UNAME)),)
-		WITH_DYNAREC=x86
+		WITH_DYNAREC := x86
 	else ifneq ($(findstring MINGW64,$(UNAME)),)
-		WITH_DYNAREC=x86_64
+		WITH_DYNAREC := x86_64
 	endif
 else ifeq ($(platform),unix)
-	ifneq ($(findstring i686,$(UNAMEM)),)
-		WITH_DYNAREC=x86
-	else ifneq ($(findstring x86_64,$(UNAMEM)),)
-		WITH_DYNAREC=x86_64
+	ifeq ($(target), x86)
+		WITH_DYNAREC := x86
+	else ifeq ($(target),x86_64)
+		WITH_DYNAREC := x86_64
+	else ifeq ($(target),arm)
+		WITH_DYNAREC := arm
+		WITH_EMBEDDED_SDL := 0
+	else ifeq ($(target),arm64)
+		WITH_DYNAREC := arm64
+		WITH_EMBEDDED_SDL := 0
 	endif
 else ifeq ($(platform),osx)
-	ifneq ($(findstring i686,$(UNAMEM)),)
-		WITH_DYNAREC=x86
-	else ifneq ($(findstring x86_64,$(UNAMEM)),)
-		WITH_DYNAREC=x86_64
+	ifeq ($(target), x86)
+		WITH_DYNAREC := x86
+	else ifeq ($(target),x86_64)
+		WITH_DYNAREC := x86_64
 	endif
+	WITH_EMBEDDED_SDL := 1
 endif
 
 # enable IPX
@@ -49,15 +57,14 @@ else ifeq ($(platform),osx)
 endif
 
 # arm
-
-ifeq ($(CORTEX_A7), true)
-	COMMONFLAGS += -marm -mcpu=cortex-a
+ifeq ($(CORTEX_A7), 1)
+	COMMONFLAGS += -marm -mcpu=cortex-a7
 	WITH_DYNAREC = arm
-	ifeq ($(ARM_NEON), true)
+	ifeq ($(ARM_NEON), 1)
 		COMMONFLAGS += -mfpu=neon-vfpv4
 	endif
 endif
-ifeq ($(ARM_HARDFLOAT), true)
+ifeq ($(ARM_HARDFLOAT), 1)
 	COMMONFLAGS += -mfloat-abi=hard
 endif
 
@@ -77,6 +84,11 @@ ifeq ($(platform), osx)
 		CFLAGS += $(ARCHFLAGS)
 		CXXFLAGS += $(ARCHFLAGS)
 		LDFLAGS += $(ARCHFLAGS)
+	endif
+	ifeq ($(WITH_EMBEDDED_SDL), 0)
+		LDFLAGS += -lSDL -lSDL_net
+	else
+		COMMONFLAGS += -D__MACOSX__
 	endif
 else ifneq (,$(findstring ios,$(platform)))
 	TARGET := $(TARGET_NAME)_libretro_ios.dylib
@@ -150,25 +162,34 @@ else ifeq ($(platform), wiiu)
 	AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
 	COMMONFLAGS += -DGEKKO -DWIIU -DHW_RVL -mwup -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__ -DMSB_FIRST -DWORDS_BIGENDIAN=1 -I./deps/include/
 	COMMONFLAGS += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int
-	WITH_EMBEDDED_SDL = 1
 	STATIC_LINKING = 1
 	WITH_DYNAREC =
 else ifeq ($(platform), emscripten)
 	TARGET := $(TARGET_NAME)_libretro_$(platform).bc
 	STATIC_LINKING = 1
 	COMMONFLAGS += -DEMSCRIPTEN
-	WITH_EMBEDDED_SDL = 1
 else ifeq ($(platform), win)
 	COMMONFLAGS += -mno-ms-bitfields
 	TARGET := $(TARGET_NAME)_libretro.dll
-	LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=link.T -lwinmm -Wl,-Bstatic `sdl-config --static-libs` -lsdl_net -Wl,-Bdynamic -liphlpapi -lws2_32
+	LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=link.T -lwinmm
+	ifeq ($(WITH_EMBEDDED_SDL), 0)
+		LDFLAGS += -Wl,-Bstatic `sdl-config --static-libs` -lsdl_net
+	else
+		COMMONFLAGS += -D__USE_W32_SOCKETS
+	endif
+    LDFLAGS += -Wl,-Bdynamic -liphlpapi -lws2_32
 else
 	COMMONFLAGS += -DC_HAVE_MPROTECT="1"
 	TARGET := $(TARGET_NAME)_libretro.so
-	LDFLAGS += -shared -Wl,--version-script=link.T -lSDL -lSDL_net
+	LDFLAGS += -shared -Wl,--version-script=link.T
+	ifeq ($(WITH_EMBEDDED_SDL), 0)
+		LDFLAGS += `sdl-config --static-libs` -lSDL_net
+	else
+		COMMONFLAGS += -DUNIX_PORTABLE
+	endif
+    LDFLAGS += -Wl,-Bdynamic
 	fpic = -fPIC
 endif
-
 ifeq ($(DEBUG), 1)
 	COMMONFLAGS += -O0 -g
 else

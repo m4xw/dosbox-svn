@@ -310,7 +310,6 @@ void DOS_Shell::Run(void) {
 		return;
 	}
 	/* Start a normal shell and check for a first command init */
-	WriteOut(MSG_Get("SHELL_STARTUP_BEGIN"),VERSION);
 	if (cmd->FindString("/INIT",line,true)) {
 		WriteOut(MSG_Get("SHELL_STARTUP_BEGIN"),VERSION);
 #if C_DEBUG
