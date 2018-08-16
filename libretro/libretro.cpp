@@ -118,9 +118,22 @@ void retro_set_input_poll(retro_input_poll_t cb) { poll_cb = cb; }
 void retro_set_input_state(retro_input_state_t cb) { input_cb = cb; }
 
 /* helper functions */
+bool compare_dosbox_variable(std::string section_string, std::string var_string, std::string val_string)
+{
+    bool ret = false;
+    Section* section = control->GetSection(section_string);
+    Section_prop *secprop = static_cast <Section_prop*>(section);
+    if (secprop)
+        ret =section->GetPropValue(var_string) == val_string;
+
+    return ret;
+}
+
 bool update_dosbox_variable(std::string section_string, std::string var_string, std::string val_string)
 {
     bool ret = false;
+    if (compare_dosbox_variable(section_string, var_string, val_string))
+        return false;
 
     Section* section = control->GetSection(section_string);
     Section_prop *secprop = static_cast <Section_prop*>(section);
@@ -131,6 +144,7 @@ bool update_dosbox_variable(std::string section_string, std::string var_string, 
         ret = section->HandleInputline(inputline.c_str());
         section->ExecuteInit(false);
     }
+    log_cb(RETRO_LOG_INFO, "[dosbox] variable %s::%s updated\n", section_string.c_str(), var_string.c_str(), val_string.c_str());
     return ret;
 }
 
@@ -213,15 +227,18 @@ void check_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
+        bool prev = adv_core_options;
         if (strcmp(var.value, "true") == 0)
         {
             adv_core_options = true;
-            environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars_advanced);
+            if (prev != adv_core_options)
+                environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars_advanced);
         }
         else
         {
             adv_core_options = false;
-            environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
+            if (prev != adv_core_options)
+                environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
         }
     }
 
@@ -286,11 +303,14 @@ void check_variables()
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
+        bool prev = emulated_mouse;
         if (strcmp(var.value, "enable") == 0)
             emulated_mouse = true;
         else
             emulated_mouse = false;
-        MAPPER_Init();
+
+        if (prev != emulated_mouse)
+            MAPPER_Init();
     }
 
     var.key = "dosbox_svn_cpu_cycles_mode";
@@ -427,7 +447,6 @@ void check_variables()
                 disney_init = false;
         }
 
-;
     }
 }
 
@@ -473,12 +492,12 @@ static void start_dosbox(void)
     catch(int)
     {
         if (log_cb)
-            log_cb(RETRO_LOG_WARN, "Frontend asked to exit\n");
+            log_cb(RETRO_LOG_WARN, "[dosbox] frontend asked to exit\n");
         return;
     }
 
     if (log_cb)
-        log_cb(RETRO_LOG_WARN, "DOSBox asked to exit\n");
+        log_cb(RETRO_LOG_WARN, "[dosbox] core asked to exit\n");
 
     dosbox_exit = true;
 }
@@ -493,7 +512,7 @@ static void wrap_dosbox()
     while(true)
     {
         if (log_cb)
-            log_cb(RETRO_LOG_ERROR, "Running a dead DOSBox instance\n");
+            log_cb(RETRO_LOG_ERROR, "[dosbox] running a dead DOSBox instance\n");
         co_switch(mainThread);
     }
 }
@@ -512,7 +531,7 @@ void init_threads(void)
     else
     {
         if (log_cb)
-            log_cb(RETRO_LOG_WARN, "Init called more than once \n");
+            log_cb(RETRO_LOG_WARN, "[dosbox] init called more than once \n");
     }
 }
 
@@ -520,7 +539,7 @@ void restart_program(std::vector<std::string> & parameters)
 {
 
     if (log_cb)
-        log_cb(RETRO_LOG_WARN, "Program restart not supported\n");
+        log_cb(RETRO_LOG_WARN, "[dosbox] program restart not supported\n");
 
     return;
 
@@ -654,7 +673,7 @@ void retro_init (void)
         log_cb = NULL;
 
     if (log_cb)
-        log_cb(RETRO_LOG_INFO, "Logger interface initialized\n");
+        log_cb(RETRO_LOG_INFO, "[dosbox] logger interface initialized\n");
 
     static struct retro_midi_interface midi_interface;
     if(environ_cb(RETRO_ENVIRONMENT_GET_MIDI_INTERFACE, &midi_interface))
@@ -663,7 +682,7 @@ void retro_init (void)
         retro_midi_interface = NULL;
 
     if (log_cb)
-        log_cb(RETRO_LOG_INFO, "MIDI interface %s.\n",
+        log_cb(RETRO_LOG_INFO, "[dosbox] MIDI interface %s.\n",
             retro_midi_interface ? "initialized" : "unavailable\n");
 
     RDOSGFXcolorMode = RETRO_PIXEL_FORMAT_XRGB8888;
@@ -675,19 +694,19 @@ void retro_init (void)
     if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir) && system_dir)
         retro_system_directory = system_dir;
     if (log_cb)
-        log_cb(RETRO_LOG_INFO, "SYSTEM_DIRECTORY: %s\n", retro_system_directory.c_str());
+        log_cb(RETRO_LOG_INFO, "[dosbox] SYSTEM_DIRECTORY: %s\n", retro_system_directory.c_str());
 
     const char *save_dir = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
         retro_save_directory = save_dir;
     if (log_cb)
-        log_cb(RETRO_LOG_INFO, "SAVE_DIRECTORY: %s\n", retro_save_directory.c_str());
+        log_cb(RETRO_LOG_INFO, "[dosbox] SAVE_DIRECTORY: %s\n", retro_save_directory.c_str());
 
     const char *content_dir = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &content_dir) && content_dir)
         retro_content_directory = content_dir;
     if (log_cb)
-        log_cb(RETRO_LOG_INFO, "CONTENT_DIRECTORY: %s\n", retro_content_directory.c_str());
+        log_cb(RETRO_LOG_INFO, "[dosbox] CONTENT_DIRECTORY: %s\n", retro_content_directory.c_str());
 }
 
 void retro_deinit(void)
@@ -738,7 +757,7 @@ char slash;
                 {
                     configPath = normalize_path(retro_save_directory + slash +  retro_library_name + ".conf");
                     if(log_cb)
-                        log_cb(RETRO_LOG_INFO, "Loading default configuration %s\n", configPath.c_str());
+                        log_cb(RETRO_LOG_INFO, "[dosbox] loading default configuration %s\n", configPath.c_str());
                 }
             }
         }
@@ -746,7 +765,7 @@ char slash;
         {
             configPath = normalize_path(retro_save_directory + slash +  retro_library_name + ".conf");
             if(log_cb)
-                log_cb(RETRO_LOG_INFO, "Loading default configuration %s\n", configPath.c_str());
+                log_cb(RETRO_LOG_INFO, "[dosbox] loading default configuration %s\n", configPath.c_str());
         }
 
         co_switch(emuThread);
@@ -756,7 +775,7 @@ char slash;
     else
     {
         if(log_cb)
-            log_cb(RETRO_LOG_WARN, "Load game called without emulator thread\n");
+            log_cb(RETRO_LOG_WARN, "[dosbox] load game called without emulator thread\n");
         return false;
     }
 }
@@ -780,7 +799,7 @@ void retro_run (void)
     if (RDOSGFXwidth != currentWidth || RDOSGFXheight != currentHeight)
     {
         if (log_cb)
-            log_cb(RETRO_LOG_INFO,"Resolution changed %dx%d => %dx%d\n",
+            log_cb(RETRO_LOG_INFO,"[dosbox] resolution changed %dx%d => %dx%d\n",
                 currentWidth, currentHeight, RDOSGFXwidth, RDOSGFXheight);
         struct retro_system_av_info new_av_info;
         retro_get_system_av_info(&new_av_info);
@@ -813,7 +832,7 @@ void retro_run (void)
     else
     {
         if (log_cb)
-            log_cb(RETRO_LOG_WARN, "Run called without emulator thread\n");
+            log_cb(RETRO_LOG_WARN, "[dosbox] run called without emulator thread\n");
     }
     if (retro_midi_interface && retro_midi_interface->output_enabled())
         retro_midi_interface->flush();
