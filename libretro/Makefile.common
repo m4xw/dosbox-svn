@@ -184,11 +184,7 @@ else ifeq ($(WITH_DYNAREC), x86_64)
 		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
 	endif
 else ifeq ($(WITH_DYNAREC), x86)
-	ifeq ($(platform),win)
-		COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
-	else
-		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86"
-	endif
+	COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
 else ifeq ($(WITH_DYNAREC), ppc)
 	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="POWERPC"
 else ifeq ($(WITH_DYNAREC), mips)
