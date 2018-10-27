@@ -135,39 +135,6 @@ endif
 SOURCES_C := \
 	$(LIBRETRO_COMM_DIR)/libco/libco.c
 
-ifeq ($(WITH_EMBEDDED_SDL), 1)
-ifeq ($(platform),win)
-	SOURCES_C += \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/win32/SDL_sysmutex.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/win32/SDL_syssem.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/win32/SDL_systhread.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/cdrom/win32/SDL_syscdrom.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/timer/win32/SDL_systimer.c
-	else
-	SOURCES_C += \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/pthread/SDL_syscond.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/pthread/SDL_sysmutex.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/pthread/SDL_syssem.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/pthread/SDL_systhread.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/cdrom/dummy/SDL_syscdrom.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/timer/unix/SDL_systimer.c
-	endif
-	SOURCES_C += \
-		$(LIBRETRO_SDL_DIR)/SDL/src/thread/SDL_thread.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/timer/SDL_timer.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/cdrom/SDL_cdrom.c \
-		$(LIBRETRO_SDL_DIR)/SDL/src/SDL_error.c \
-		$(LIBRETRO_SDL_DIR)/SDL_net/SDLnet.c \
-		$(LIBRETRO_SDL_DIR)/SDL_net/SDLnetTCP.c \
-		$(LIBRETRO_SDL_DIR)/SDL_net/SDLnetUDP.c \
-		$(LIBRETRO_SDL_DIR)/SDL_net/SDLnetselect.c
-	INCFLAGS += \
-		-I$(LIBRETRO_SDL_DIR)/include/ \
-		-I$(LIBRETRO_SDL_DIR)/include/SDL/ \
-		-I$(LIBRETRO_SDL_DIR)/SDL_net/
-endif
-
-
 # dynarec flags
 ifeq ($(WITH_DYNAREC), arm)
 	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV7LE" -DC_UNALIGNED_MEMORY="1"
