@@ -134,7 +134,7 @@ bool compare_dosbox_variable(std::string section_string, std::string var_string,
 bool update_dosbox_variable(std::string section_string, std::string var_string, std::string val_string)
 {
     bool ret = false;
-    if (compare_dosbox_variable(section_string, var_string, val_string) || !dosbox_initialiazed)
+    if (compare_dosbox_variable(section_string, var_string, val_string))
         return false;
 
     Section* section = control->GetSection(section_string);
@@ -198,8 +198,8 @@ struct retro_variable vars_advanced[] = {
     { "dosbox_svn_sblaster_opl_mode",     "Sound Blaster OPL Mode; auto|cms|op12|dualop12|op13|op13gold|none" },
     { "dosbox_svn_sblaster_opl_emu",      "Sound Blaster OPL Provider; default|compat|fast|mame" },
     { "dosbox_svn_pcspeaker",             "Enable PC-Speaker; false|true" },
-    { "dosbox_svn_tandy",                 "Enable Tandy Sound System; auto|on|off" },
-    { "dosbox_svn_disney",                "Enable Disney Sound Source; false|true" },
+    { "dosbox_svn_tandy",                 "Enable Tandy Sound System (restart); auto|on|off" },
+    { "dosbox_svn_disney",                "Enable Disney Sound Source (restart); false|true" },
 #if defined(C_IPX)
     { "dosbox_svn_ipx",                   "Enable IPX over UDP; false|true" },
 #endif
@@ -435,12 +435,12 @@ void check_variables()
 
         var.key = "dosbox_svn_tandy";
         var.value = NULL;
-        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !dosbox_initialiazed)
             update_dosbox_variable("speaker", "tandy", var.value);
 
         var.key = "dosbox_svn_disney";
         var.value = NULL;
-        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !dosbox_initialiazed)
         {
             update_dosbox_variable("speaker", "disney", var.value);
             if (!strcmp(var.value,"true"))
