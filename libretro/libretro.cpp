@@ -61,6 +61,7 @@ cothread_t mainThread;
 cothread_t emuThread;
 
 bool dosbox_initialiazed = false;
+bool midi_enable = false;
 
 Bit32u MIXER_RETRO_GetFrequency();
 void MIXER_CallBack(void * userdata, uint8_t *stream, int len);
@@ -111,6 +112,7 @@ unsigned currentWidth, currentHeight;
 /* audio variables */
 static uint8_t audioData[829 * 4]; // 49716hz max
 static uint32_t samplesPerFrame = 735;
+static struct retro_midi_interface midi_interface;
 
 /* callbacks */
 void retro_set_video_refresh(retro_video_refresh_t cb) { video_cb = cb; }
@@ -197,6 +199,7 @@ struct retro_variable vars_advanced[] = {
     { "dosbox_svn_sblaster_hdma",         "Sound Blaster High DMA; 7|0|1|3|5|6" },
     { "dosbox_svn_sblaster_opl_mode",     "Sound Blaster OPL Mode; auto|cms|op12|dualop12|op13|op13gold|none" },
     { "dosbox_svn_sblaster_opl_emu",      "Sound Blaster OPL Provider; default|compat|fast|mame" },
+    { "dosbox_svn_midi",                  "Enable MIDI passthrough; false|true" },
     { "dosbox_svn_pcspeaker",             "Enable PC-Speaker; false|true" },
     { "dosbox_svn_tandy",                 "Enable Tandy Sound System (restart); auto|on|off" },
     { "dosbox_svn_disney",                "Enable Disney Sound Source (restart); false|true" },
@@ -394,6 +397,11 @@ void check_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         update_dosbox_variable("speaker", "pcspeaker", var.value);
 
+    var.key = "dosbox_svn_midi";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        midi_enable = true;
+
 #if defined(IPX)
     var.key = "dosbox_ipx";
     var.value = NULL;
@@ -482,6 +490,17 @@ static void start_dosbox(void)
     check_variables();
     dosbox_initialiazed = true;
 
+    if (midi_enable)
+    {
+        if(environ_cb(RETRO_ENVIRONMENT_GET_MIDI_INTERFACE, &midi_interface))
+            retro_midi_interface = &midi_interface;
+        else
+            retro_midi_interface = NULL;
+
+        if (log_cb)
+            log_cb(RETRO_LOG_INFO, "[dosbox] MIDI interface %s.\n",
+                retro_midi_interface ? "initialized" : "unavailable\n");
+    }
     /* Init done, go back to the main thread */
     co_switch(mainThread);
 
@@ -678,16 +697,6 @@ void retro_init (void)
     if (log_cb)
         log_cb(RETRO_LOG_INFO, "[dosbox] logger interface initialized\n");
 
-    static struct retro_midi_interface midi_interface;
-    if(environ_cb(RETRO_ENVIRONMENT_GET_MIDI_INTERFACE, &midi_interface))
-        retro_midi_interface = &midi_interface;
-    else
-        retro_midi_interface = NULL;
-
-    if (log_cb)
-        log_cb(RETRO_LOG_INFO, "[dosbox] MIDI interface %s.\n",
-            retro_midi_interface ? "initialized" : "unavailable\n");
-
     RDOSGFXcolorMode = RETRO_PIXEL_FORMAT_XRGB8888;
     environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &RDOSGFXcolorMode);
 
@@ -837,7 +846,7 @@ void retro_run (void)
         if (log_cb)
             log_cb(RETRO_LOG_WARN, "[dosbox] run called without emulator thread\n");
     }
-    if (retro_midi_interface && retro_midi_interface->output_enabled())
+    if (midi_enable && retro_midi_interface && retro_midi_interface->output_enabled())
         retro_midi_interface->flush();
 }
 
