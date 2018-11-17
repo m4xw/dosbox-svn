@@ -143,10 +143,7 @@ else ifeq ($(WITH_DYNAREC), arm64)
 else ifeq ($(WITH_DYNAREC), oldarm)
 	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="ARMV4LE"
 else ifeq ($(WITH_DYNAREC), x86_64)
-	# dynarec currently broken in x86_64
-	ifneq ($(platform),win)
-		COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
-	endif
+	COMMONFLAGS += -DC_DYNREC="1" -DC_TARGETCPU="X86_64"
 else ifeq ($(WITH_DYNAREC), x86)
 	COMMONFLAGS += -DC_DYNAMIC_X86="1" -DC_TARGETCPU="X86"
 else ifeq ($(WITH_DYNAREC), ppc)
