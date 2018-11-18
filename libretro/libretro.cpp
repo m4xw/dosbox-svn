@@ -130,6 +130,7 @@ char disk_array[16][PATH_MAX_LENGTH];
 unsigned disk_index = 0;
 unsigned disk_count = 0;
 bool disk_tray_ejected;
+char disk_load_image[PATH_MAX_LENGTH];
 
 /* helper functions */
 bool mount_disk_image(char *path)
@@ -815,7 +816,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #else
     info->library_version = CORE_VERSION;
 #endif
-    info->valid_extensions = "exe|com|bat|conf|iso|cue";
+    info->valid_extensions = "exe|com|bat|conf|cue|iso";
     info->need_fullpath = true;
     info->block_extract = false;
 }
@@ -906,9 +907,18 @@ char slash;
                 std::string extension = loadPath.substr(lastDot + 1);
                 std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
 
-                if((extension == "conf"))
+                if(extension == "conf")
                 {
                     configPath = loadPath;
+                    loadPath.clear();
+                }
+                else if(extension == "iso" || extension == "cue")
+                {
+                    configPath = normalize_path(retro_save_directory + slash +  retro_library_name + ".conf");
+                    if(log_cb)
+                        log_cb(RETRO_LOG_INFO, "[dosbox] loading default configuration %s\n", configPath.c_str());
+                    disk_add_image_index();
+                    snprintf(disk_load_image, sizeof(disk_load_image), "%s", loadPath.c_str());
                     loadPath.clear();
                 }
                 else if(configPath.empty())
@@ -951,6 +961,13 @@ void retro_run (void)
         emuThread = NULL;
         environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, 0);
         return;
+    }
+
+    if (disk_load_image[0]!='\0')
+    {
+        mount_disk_image(disk_load_image);
+        snprintf(disk_array[0], sizeof(char) * PATH_MAX_LENGTH, "%s", disk_load_image);
+        disk_load_image[0] = '\0';
     }
 
     /* Dynamic resolution switching */
