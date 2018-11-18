@@ -40,6 +40,8 @@
 #include "pic.h"
 #include "joystick.h"
 #include "ints/int10.h"
+#include "dos/drives.h"
+#include "programs.h"
 
 #define RETRO_DEVICE_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 1)
 
@@ -69,6 +71,8 @@ void MIXER_CallBack(void * userdata, uint8_t *stream, int len);
 extern Config * control;
 MachineType machine = MCH_VGA;
 SVGACards svgaCard = SVGA_None;
+
+enum { CDROM_USE_SDL, CDROM_USE_ASPI, CDROM_USE_IOCTL_DIO, CDROM_USE_IOCTL_DX, CDROM_USE_IOCTL_MCI };
 
 /* input variables */
 int current_port;
@@ -121,7 +125,69 @@ void retro_set_audio_sample_batch(retro_audio_sample_batch_t cb) { audio_batch_c
 void retro_set_input_poll(retro_input_poll_t cb) { poll_cb = cb; }
 void retro_set_input_state(retro_input_state_t cb) { input_cb = cb; }
 
+/* disk-control variables */
+char disk_array[16][PATH_MAX_LENGTH];
+unsigned disk_index = 0;
+unsigned disk_count = 0;
+bool disk_tray_ejected;
+
 /* helper functions */
+bool mount_disk_image(char *path)
+{
+    log_cb(RETRO_LOG_INFO, "[dosbox] mounting disk %s\n", path);
+    if(control->SecureMode())
+    {
+        if (log_cb)
+            log_cb(RETRO_LOG_INFO, "[dosbox] this operation is not permitted in secure mode\n");
+        return false;
+    }
+
+    if (disk_count == 0)
+    {
+        if (log_cb)
+            log_cb(RETRO_LOG_INFO, "[dosbox] no disks added to index\n");
+        return false;
+    }
+
+    int error = -1;
+
+    DOS_Drive * newdrive = NULL;
+    imageDisk * newImage = NULL;
+    Bit32u imagesize;
+    char drive = 'D';
+
+    Bit8u mediaid = 0xF8;
+    std::string fstype="iso";
+
+    MSCDEX_SetCDInterface(CDROM_USE_SDL, -1);
+
+    // create new drives for all images
+    std::vector<DOS_Drive*> isoDisks;
+    std::vector<std::string>::size_type i;
+    std::vector<DOS_Drive*>::size_type ct;
+
+    DOS_Drive* newDrive = new isoDrive(drive, path, mediaid, error);
+    isoDisks.push_back(newDrive);
+    if (error != 0)
+    {
+        if (log_cb)
+            log_cb(RETRO_LOG_DEBUG, "[dosbox] mount error while mounting %s, %d\n", error);
+        return false;
+    }
+
+    DriveManager::AppendDisk(drive - 'A', isoDisks[0]);
+    DriveManager::InitializeDrive(drive - 'A');
+    // Set the correct media byte in the table
+    mem_writeb(Real2Phys(dos.tables.mediaid) + (drive - 'A') * 9, mediaid);
+
+    for(Bitu i =0; i<DOS_DRIVES;i++)
+    {
+        if (Drives[i]) Drives[i]->EmptyCache();
+    }
+    DriveManager::CycleDisks(drive - 'A', true);
+}
+
+
 bool compare_dosbox_variable(std::string section_string, std::string var_string, std::string val_string)
 {
     bool ret = false;
@@ -153,6 +219,84 @@ bool update_dosbox_variable(std::string section_string, std::string var_string, 
 }
 
 /* libretro core implementation */
+static unsigned disk_get_num_images()
+{
+    return disk_count;
+}
+
+static bool disk_get_eject_state()
+{
+    return disk_tray_ejected;
+}
+
+static unsigned disk_get_image_index()
+{
+    return disk_index;
+}
+
+static bool disk_set_eject_state(bool ejected)
+{
+    char drive = 'D';
+    Bit8u mediaid = 0xF8;
+
+    if (log_cb && ejected)
+        log_cb(RETRO_LOG_INFO, "[dosbox] tray open\n");
+    else if (!ejected)
+        log_cb(RETRO_LOG_INFO, "[dosbox] tray closed\n");
+    disk_tray_ejected = ejected;
+
+    if (ejected)
+    {
+        if (Drives[drive - 'A'])
+        DriveManager::UnmountDrive(drive - 'A');
+        Drives[drive - 'A'] = 0;
+    }
+    else
+    {
+        mount_disk_image(disk_array[disk_get_image_index()]);
+    }
+    DriveManager::CycleDisks(drive - 'A', true);
+    return true;
+}
+
+static bool disk_set_image_index(unsigned index)
+{
+    if (index < disk_get_num_images())
+    {
+        disk_index = index;
+        if (log_cb)
+            log_cb(RETRO_LOG_INFO, "[dosbox] disk index %u\n", index);
+        return true;
+    }
+    return false;
+}
+
+static bool disk_add_image_index()
+{
+    disk_count++;
+    if (log_cb)
+        log_cb(RETRO_LOG_INFO, "[dosbox] disk count %u\n", disk_count);
+    return true;
+}
+
+static bool disk_replace_image_index(unsigned index, const struct retro_game_info *info)
+{
+    if (index < disk_get_num_images())
+        snprintf(disk_array[index], sizeof(char) * PATH_MAX_LENGTH, "%s", info->path);
+    mount_disk_image(disk_array[index]);
+    return true;
+}
+
+static struct retro_disk_control_callback disk_interface = {
+    disk_set_eject_state,
+    disk_get_eject_state,
+    disk_get_image_index,
+    disk_set_image_index,
+    disk_get_num_images,
+    disk_replace_image_index,
+    disk_add_image_index,
+};
+
 struct retro_variable vars[] = {
     { "dosbox_svn_use_options",           "Enable core-options; true|false"},
     { "dosbox_svn_adv_options",           "Enable advanced core-options; false|true"},
@@ -487,6 +631,9 @@ static void start_dosbox(void)
     if (!is_restarting)
         control->Init();
 
+    /* Init done, go back to the main thread */
+    co_switch(mainThread);
+
     check_variables();
     dosbox_initialiazed = true;
 
@@ -501,8 +648,6 @@ static void start_dosbox(void)
             log_cb(RETRO_LOG_INFO, "[dosbox] MIDI interface %s.\n",
                 retro_midi_interface ? "initialized" : "unavailable\n");
     }
-    /* Init done, go back to the main thread */
-    co_switch(mainThread);
 
     /* Schedule the next frontend interrupt */
     PIC_AddEvent(leave_thread, 1000.0f / 60.0f, 0);
@@ -608,6 +753,7 @@ void retro_set_environment(retro_environment_t cb)
 
     cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &allow_no_game);
     cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
+    cb(RETRO_ENVIRONMENT_SET_DISK_CONTROL_INTERFACE, &disk_interface);
 
     static const struct retro_controller_description ports_default[] =
     {
@@ -669,7 +815,7 @@ void retro_get_system_info(struct retro_system_info *info)
 #else
     info->library_version = CORE_VERSION;
 #endif
-    info->valid_extensions = "exe|com|bat|conf";
+    info->valid_extensions = "exe|com|bat|conf|iso|cue";
     info->need_fullpath = true;
     info->block_extract = false;
 }

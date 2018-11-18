@@ -56,7 +56,6 @@
 Bitu DEBUG_EnableDebugger(void);
 #endif
 
-void MSCDEX_SetCDInterface(int intNr, int forceCD);
 static Bitu ZDRIVE_NUM = 25;
 
 class MOUNT : public Program {
