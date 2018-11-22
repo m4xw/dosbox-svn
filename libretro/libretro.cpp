@@ -303,6 +303,7 @@ struct retro_variable vars[] = {
     { "dosbox_svn_adv_options",           "Enable advanced core-options; false|true"},
     { "dosbox_svn_machine_type",          "Emulated machine; svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
     { "dosbox_svn_scaler",                "Scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
+    { "dosbox_svn_joystick_timed",        "Enable Joystick Timed Intervals; true|false" },
     { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
     { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
@@ -324,6 +325,7 @@ struct retro_variable vars_advanced[] = {
     { "dosbox_svn_adv_options",           "Enable advanced core-options; false|true"},
     { "dosbox_svn_machine_type",          "Emulated machine; svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
     { "dosbox_svn_scaler",                "Scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
+    { "dosbox_svn_joystick_timed",        "Enable Joystick Timed Intervals; true|false" },
     { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
     { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
@@ -547,8 +549,13 @@ void check_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         midi_enable = true;
 
+    var.key = "dosbox_svn_joystick_timed";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        update_dosbox_variable("joystick", "timed", var.value);
+
 #if defined(IPX)
-    var.key = "dosbox_ipx";
+    var.key = "dosbox_svn_ipx";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         update_dosbox_variable("ipx", "ipx", var.value);
