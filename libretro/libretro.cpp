@@ -152,8 +152,6 @@ bool mount_disk_image(char *path)
 
     int error = -1;
 
-    DOS_Drive * newdrive = NULL;
-    imageDisk * newImage = NULL;
     Bit32u imagesize;
     char drive = 'D';
 
@@ -162,30 +160,44 @@ bool mount_disk_image(char *path)
 
     MSCDEX_SetCDInterface(CDROM_USE_SDL, -1);
 
-    // create new drives for all images
-    std::vector<DOS_Drive*> isoDisks;
-    std::vector<std::string>::size_type i;
-    std::vector<DOS_Drive*>::size_type ct;
-
-    DOS_Drive* newDrive = new isoDrive(drive, path, mediaid, error);
-    isoDisks.push_back(newDrive);
-    if (error != 0)
-    {
-        if (log_cb)
-            log_cb(RETRO_LOG_DEBUG, "[dosbox] mount error while mounting %s, %d\n", error);
-        return false;
+    DOS_Drive* iso = new isoDrive(drive, path, mediaid, error);
+    switch (error) {
+        case 0:	break;
+        case 1:
+            log_cb(RETRO_LOG_INFO, "[dosbox] MSCDEX: Failure: Drive-letters of multiple CD-ROM drives have to be continuous.\n");
+            return false;
+        case 2:
+            log_cb(RETRO_LOG_INFO, "[dosbox] MSCDEX: Failure: Not yet supported.\n");
+            return false;
+        case 3:
+            log_cb(RETRO_LOG_INFO, "[dosbox] MSCDEX: Specified location is not a CD-ROM drive.\n");
+            return false;
+        case 4:
+            log_cb(RETRO_LOG_INFO, "[dosbox] MSCDEX: Failure: Invalid file or unable to open.\n");
+            return false;
+        case 5:
+            log_cb(RETRO_LOG_INFO, "[dosbox] MSCDEX: Failure: Too many CD-ROM drives (max: 5). MSCDEX Installation failed.\n");
+            return false;
+        case 6:
+            log_cb(RETRO_LOG_INFO, "[dosbox] MSCDEX: Mounted subdirectory: limited support.\n");
+            return false;
+        default:
+            log_cb(RETRO_LOG_INFO, "[dosbox] MSCDEX: Failure: Unknown error.\n");
+            return false;
     }
 
-    DriveManager::AppendDisk(drive - 'A', isoDisks[0]);
+    DriveManager::AppendDisk(drive - 'A', iso);
     DriveManager::InitializeDrive(drive - 'A');
-    // Set the correct media byte in the table
+
+    /* set the correct media byte in the table */
     mem_writeb(Real2Phys(dos.tables.mediaid) + (drive - 'A') * 9, mediaid);
 
-    for(Bitu i =0; i<DOS_DRIVES;i++)
-    {
+    for(Bitu i = 0; i < DOS_DRIVES; i++)
         if (Drives[i]) Drives[i]->EmptyCache();
-    }
+
     DriveManager::CycleDisks(drive - 'A', true);
+
+    return true;
 }
 
 
