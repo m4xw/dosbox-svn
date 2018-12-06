@@ -28,6 +28,8 @@
 #include <unistd.h>
 #endif
 
+#include <cmath>
+
 #include <libco.h>
 #include "libretro.h"
 #include "libretro_dosbox.h"
@@ -35,6 +37,7 @@
 #include "setup.h"
 #include "dosbox.h"
 #include "mapper.h"
+#include "render.h"
 #include "mixer.h"
 #include "control.h"
 #include "pic.h"
@@ -64,6 +67,7 @@ cothread_t emuThread;
 
 bool dosbox_initialiazed = false;
 bool midi_enable = false;
+bool fast_forward = false;
 
 Bit32u MIXER_RETRO_GetFrequency();
 void MIXER_CallBack(void * userdata, uint8_t *stream, int len);
@@ -80,9 +84,11 @@ bool autofire;
 bool gamepad[16]; /* true means gamepad, false means joystick */
 bool connected[16];
 bool emulated_mouse;
+
+/* core option variables */
 static bool use_core_options;
 static bool adv_core_options;
-bool disney_init;
+static bool variable_refresh;
 
 /* directories */
 std::string retro_save_directory;
@@ -112,11 +118,13 @@ extern Bitu RDOSGFXwidth, RDOSGFXheight, RDOSGFXpitch;
 extern unsigned RDOSGFXcolorMode;
 extern void* RDOSGFXhaveFrame;
 unsigned currentWidth, currentHeight;
+float currentFPS = 60.0f;
 
 /* audio variables */
 static uint8_t audioData[829 * 4]; // 49716hz max
 static uint32_t samplesPerFrame = 735;
 static struct retro_midi_interface midi_interface;
+bool disney_init;
 
 /* callbacks */
 void retro_set_video_refresh(retro_video_refresh_t cb) { video_cb = cb; }
@@ -335,6 +343,7 @@ struct retro_variable vars[] = {
 struct retro_variable vars_advanced[] = {
     { "dosbox_svn_use_options",           "Enable core-options; true|false"},
     { "dosbox_svn_adv_options",           "Enable advanced core-options; false|true"},
+    { "dosbox_svn_use_native_refresh",    "Refresh rate switching; false|true"},
     { "dosbox_svn_machine_type",          "Emulated machine; svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
     { "dosbox_svn_scaler",                "Scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
     { "dosbox_svn_joystick_timed",        "Enable Joystick Timed Intervals; true|false" },
@@ -621,6 +630,15 @@ void check_variables()
                 disney_init = false;
         }
 
+        var.key = "dosbox_svn_use_native_refresh";
+        var.value = NULL;
+        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        {
+            if (!strcmp(var.value,"true"))
+                variable_refresh = true;
+            else
+                variable_refresh = false;
+        }
     }
 }
 
@@ -630,7 +648,7 @@ static void leave_thread(Bitu)
     co_switch(mainThread);
 
     /* Schedule the next frontend interrupt */
-    PIC_AddEvent(leave_thread, 1000.0f / 60.0f, 0);
+    PIC_AddEvent(leave_thread, 1000.0f / currentFPS);
 }
 
 static void start_dosbox(void)
@@ -670,7 +688,7 @@ static void start_dosbox(void)
     }
 
     /* Schedule the next frontend interrupt */
-    PIC_AddEvent(leave_thread, 1000.0f / 60.0f, 0);
+    PIC_AddEvent(leave_thread, 1000.0f / currentFPS);
 
     try
     {
@@ -847,7 +865,7 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->geometry.max_width = 1024;
     info->geometry.max_height = 768;
     info->geometry.aspect_ratio = (float)4/3;
-    info->timing.fps = 60.0;
+    info->timing.fps = currentFPS;
     info->timing.sample_rate = (double)MIXER_RETRO_GetFrequency();
 }
 
@@ -956,7 +974,7 @@ char slash;
         }
 
         co_switch(emuThread);
-        samplesPerFrame = MIXER_RETRO_GetFrequency() / 60;
+        samplesPerFrame = MIXER_RETRO_GetFrequency() / currentFPS;
         return true;
     }
     else
@@ -982,6 +1000,9 @@ void retro_run (void)
         return;
     }
 
+    environ_cb(RETRO_ENVIRONMENT_GET_FASTFORWARDING, &fast_forward);
+    DOSBOX_UnlockSpeed(fast_forward);
+
     if (disk_load_image[0]!='\0')
     {
         mount_disk_image(disk_load_image);
@@ -990,18 +1011,36 @@ void retro_run (void)
     }
 
     /* Dynamic resolution switching */
-    if (RDOSGFXwidth != currentWidth || RDOSGFXheight != currentHeight)
+    if (RDOSGFXwidth != currentWidth || RDOSGFXheight != currentHeight ||
+        (fabs(currentFPS - render.src.fps) > 0.05f && render.src.fps != 0 && variable_refresh))
     {
-        if (log_cb)
-            log_cb(RETRO_LOG_INFO,"[dosbox] resolution changed %dx%d => %dx%d\n",
-                currentWidth, currentHeight, RDOSGFXwidth, RDOSGFXheight);
         struct retro_system_av_info new_av_info;
         retro_get_system_av_info(&new_av_info);
+
         new_av_info.geometry.base_width = RDOSGFXwidth;
         new_av_info.geometry.base_height = RDOSGFXheight;
-        environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
-        currentWidth = RDOSGFXwidth;
-        currentHeight = RDOSGFXheight;
+
+        if (fabs(currentFPS - render.src.fps) > 0.05f && variable_refresh)
+        {
+            new_av_info.timing.fps = render.src.fps;
+            new_av_info.timing.sample_rate = (double)MIXER_RETRO_GetFrequency();
+
+            environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO , &new_av_info);
+            if (log_cb)
+                log_cb(RETRO_LOG_INFO,"[dosbox] refresh rate changed %f => %f\n", currentFPS, render.src.fps);
+
+            currentFPS = render.src.fps;
+        }
+        else
+        {
+            environ_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &new_av_info);
+            if (log_cb)
+                log_cb(RETRO_LOG_INFO,"[dosbox] resolution changed %dx%d => %dx%d\n",
+                    currentWidth, currentHeight, RDOSGFXwidth, RDOSGFXheight);
+
+            currentWidth = RDOSGFXwidth;
+            currentHeight = RDOSGFXheight;
+        }
     }
 
     bool updated = false;
@@ -1030,6 +1069,7 @@ void retro_run (void)
     }
     if (midi_enable && retro_midi_interface && retro_midi_interface->output_enabled())
         retro_midi_interface->flush();
+    samplesPerFrame = MIXER_RETRO_GetFrequency() / currentFPS;
 }
 
 void retro_reset (void)
