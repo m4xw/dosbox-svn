@@ -320,11 +320,8 @@ static struct retro_disk_control_callback disk_interface = {
 
 struct retro_variable vars[] = {
     { "dosbox_svn_use_options",           "Enable core-options; true|false"},
-    { "dosbox_svn_adv_options",           "Enable advanced core-options; false|true"},
+    { "dosbox_svn_adv_options",           "Enable advanced core-options (restart); false|true"},
     { "dosbox_svn_machine_type",          "Emulated machine; svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
-    { "dosbox_svn_scaler",                "Scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
-    { "dosbox_svn_joystick_timed",        "Enable Joystick Timed Intervals; true|false" },
-    { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
     { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
 #else
@@ -334,6 +331,9 @@ struct retro_variable vars[] = {
     { "dosbox_svn_cpu_cycles_mode",       "CPU cycle mode; auto|fixed|max" },
     { "dosbox_svn_cpu_cycles_multiplier", "CPU cycle multiplier; 1000|10000|100000|100" },
     { "dosbox_svn_cpu_cycles",            "CPU cycles; 1|2|3|4|5|6|7|8|9" },
+    { "dosbox_svn_scaler",                "Video scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
+    { "dosbox_svn_joystick_timed",        "Joystick timed intervals; true|false" },
+    { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
     { "dosbox_svn_sblaster_type",         "Sound Blaster type; sb16|sb1|sb2|sbpro1|sbpro2|gb|none" },
     { "dosbox_svn_pcspeaker",             "Enable PC-Speaker; false|true" },
     { "dosbox_svn_ipx",                   "Enable IPX over UDP; false|true" },
@@ -342,12 +342,8 @@ struct retro_variable vars[] = {
 
 struct retro_variable vars_advanced[] = {
     { "dosbox_svn_use_options",           "Enable core-options; true|false"},
-    { "dosbox_svn_adv_options",           "Enable advanced core-options; false|true"},
-    { "dosbox_svn_use_native_refresh",    "Refresh rate switching; false|true"},
+    { "dosbox_svn_adv_options",           "Enable advanced core-options (restart); false|true"},
     { "dosbox_svn_machine_type",          "Emulated machine; svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
-    { "dosbox_svn_scaler",                "Scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
-    { "dosbox_svn_joystick_timed",        "Enable Joystick Timed Intervals; true|false" },
-    { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
     { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
 #else
@@ -360,6 +356,10 @@ struct retro_variable vars_advanced[] = {
     { "dosbox_svn_cpu_cycles_multiplier_fine",
                                           "CPU fine cycles multiplier; 100|1|10" },
     { "dosbox_svn_cpu_cycles_fine",       "CPU fine cycles; 1|2|3|4|5|6|7|9" },
+    { "dosbox_svn_scaler",                "Video scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
+    { "dosbox_svn_use_native_refresh",    "Refresh rate switching; false|true"},
+    { "dosbox_svn_joystick_timed",        "Joystick timed intervals; true|false" },
+    { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
     { "dosbox_svn_sblaster_type",         "Sound Blaster type; sb16|sb1|sb2|sbpro1|sbpro2|gb|none" },
     { "dosbox_svn_sblaster_base",         "Sound Blaster base address; 220|240|260|280|2a0|2c0|2e0|300" },
     { "dosbox_svn_sblaster_irq",          "Sound Blaster IRQ; 5|7|9|10|11|12|3" },
@@ -398,7 +398,7 @@ void check_variables()
 
     var.key = "dosbox_svn_adv_options";
     var.value = NULL;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !dosbox_initialiazed)
     {
         bool prev = adv_core_options;
         if (strcmp(var.value, "true") == 0)
