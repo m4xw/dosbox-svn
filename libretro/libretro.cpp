@@ -319,10 +319,10 @@ static struct retro_disk_control_callback disk_interface = {
 };
 
 struct retro_variable vars[] = {
-    { "dosbox_svn_use_options",           "Enable core-options; true|false"},
+    { "dosbox_svn_use_options",           "Enable core-options (restart); true|false"},
     { "dosbox_svn_adv_options",           "Enable advanced core-options (restart); false|true"},
-    { "dosbox_svn_machine_type",          "Emulated machine; svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
-    { "dosbox_svn_memory_size",           "Memory size; 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
+    { "dosbox_svn_machine_type",          "Emulated machine (restart); svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
+    { "dosbox_svn_memory_size",           "Memory size (restart); 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
     { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
 #else
@@ -342,10 +342,10 @@ struct retro_variable vars[] = {
 };
 
 struct retro_variable vars_advanced[] = {
-    { "dosbox_svn_use_options",           "Enable core-options; true|false"},
+    { "dosbox_svn_use_options",           "Enable core-options (restart); true|false"},
     { "dosbox_svn_adv_options",           "Enable advanced core-options (restart); false|true"},
-    { "dosbox_svn_machine_type",          "Emulated machine; svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
-    { "dosbox_svn_memory_size",           "Memory size; 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
+    { "dosbox_svn_machine_type",          "Emulated machine (restart); svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
+    { "dosbox_svn_memory_size",           "Memory size (restart); 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
     { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
 #else
@@ -380,13 +380,9 @@ struct retro_variable vars_advanced[] = {
 };
 
 
-void check_variables()
+void check_machine_variables()
 {
     struct retro_variable var = {0};
-    static unsigned cycles, cycles_fine;
-    static unsigned cycles_multiplier, cycles_multiplier_fine;
-    static bool update_cycles = false;
-    char   cycles_mode[12];
 
     var.key = "dosbox_svn_use_options";
     var.value = NULL;
@@ -398,32 +394,19 @@ void check_variables()
             use_core_options = false;
     }
 
-    var.key = "dosbox_svn_adv_options";
+    var.key = "dosbox_svn_memory_size";
     var.value = NULL;
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !dosbox_initialiazed)
-    {
-        bool prev = adv_core_options;
-        if (strcmp(var.value, "true") == 0)
-        {
-            adv_core_options = true;
-            if (prev != adv_core_options)
-                environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars_advanced);
-        }
-        else
-        {
-            adv_core_options = false;
-            if (prev != adv_core_options)
-                environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
-        }
-    }
-
-    if (!use_core_options)
-        return;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        update_dosbox_variable("dosbox", "memsize", var.value);
 
     var.key = "dosbox_svn_machine_type";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
+	    svgaCard = SVGA_None;
+	    machine = MCH_VGA;
+	    int10.vesa_nolfb = false;
+	    int10.vesa_oldvbe = false;
         if (strcmp(var.value, "hercules") == 0)
             machine = MCH_HERC;
         else if (strcmp(var.value, "cga") == 0)
@@ -474,10 +457,47 @@ void check_variables()
         update_dosbox_variable("dosbox", "machine", var.value);
     }
 
-    var.key = "dosbox_svn_memory_size";
+}
+
+void check_variables()
+{
+    struct retro_variable var = {0};
+    static unsigned cycles, cycles_fine;
+    static unsigned cycles_multiplier, cycles_multiplier_fine;
+    static bool update_cycles = false;
+    char   cycles_mode[12];
+
+    var.key = "dosbox_svn_use_options";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-        update_dosbox_variable("dosbox", "memsize", var.value);
+    {
+        if (strcmp(var.value, "true") == 0)
+            use_core_options = true;
+        else
+            use_core_options = false;
+    }
+
+    var.key = "dosbox_svn_adv_options";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value && !dosbox_initialiazed)
+    {
+        bool prev = adv_core_options;
+        if (strcmp(var.value, "true") == 0)
+        {
+            adv_core_options = true;
+            if (prev != adv_core_options)
+                environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars_advanced);
+        }
+        else
+        {
+            adv_core_options = false;
+            if (prev != adv_core_options)
+                environ_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void*)vars);
+        }
+    }
+
+    if (!use_core_options)
+        return;
 
     var.key = "dosbox_svn_emulated_mouse";
     var.value = NULL;
@@ -673,6 +693,7 @@ static void start_dosbox(void)
     if(!configPath.empty())
         control->ParseConfigFile(configPath.c_str());
 
+    check_machine_variables();
     if (!is_restarting)
         control->Init();
 
