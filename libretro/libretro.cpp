@@ -685,6 +685,7 @@ static void start_dosbox(void)
     CommandLine com_line(loadPath.empty() ? 1 : 2, argv);
     Config myconf(&com_line);
     control = &myconf;
+    dosbox_initialiazed = false;
 
     /* Init the configuration system and add default values */
     DOSBOX_Init();
@@ -694,8 +695,7 @@ static void start_dosbox(void)
         control->ParseConfigFile(configPath.c_str());
 
     check_machine_variables();
-    if (!is_restarting)
-        control->Init();
+    control->Init();
 
     /* Init done, go back to the main thread */
     co_switch(mainThread);
@@ -739,7 +739,8 @@ static void wrap_dosbox()
 {
     start_dosbox();
 
-    co_switch(mainThread);
+    if (emuThread && mainThread)
+        co_switch(mainThread);
 
     /* Dead emulator */
     while(true)
@@ -752,9 +753,12 @@ static void wrap_dosbox()
 
 void init_threads(void)
 {
-    if(!emuThread && !mainThread)
+    if(!mainThread)
     {
         mainThread = co_active();
+    }
+    if(!emuThread)
+    {
 #ifdef __GENODE__
         emuThread = co_create((1<<18)*sizeof(void*), wrap_dosbox);
 #else
@@ -773,7 +777,6 @@ void restart_program(std::vector<std::string> & parameters)
 
     if (log_cb)
         log_cb(RETRO_LOG_WARN, "[dosbox] program restart not supported\n");
-
     return;
 
     /* TO-DO: this kinda works but it's still not working 100% hence the early return*/
@@ -788,10 +791,7 @@ void restart_program(std::vector<std::string> & parameters)
         emuThread = NULL;
     }
 
-    co_delete(mainThread);
-    mainThread = NULL;
-
-    is_restarting = true;
+    dosbox_initialiazed = false;
     init_threads();
 }
 
