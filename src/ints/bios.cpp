@@ -42,7 +42,7 @@
 #include <sys/timeb.h>
 #endif
 
-#if defined(ANDROID)
+#if defined(ANDROID) || defined(HAVE_LIBNX) || defined(WIIU)
 
 struct FAKEtimeb
 {

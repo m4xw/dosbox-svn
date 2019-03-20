@@ -4,6 +4,11 @@ LIBRETRO_COMM_DIR := \
 LIBRETRO_SDL_DIR := \
 	$(CORE_DIR)/libretro/deps/sdl
 
+ifeq ($(WITH_FAKE_SDL), 1)
+INCFLAGS += \
+		-I$(CORE_DIR)/libretro/fakesdl
+endif
+
 # include flags
 INCFLAGS += \
 	-I$(CORE_DIR)/src \
@@ -126,10 +131,12 @@ SOURCES_CXX := \
 	$(CORE_DIR)/src/hardware/mame/sn76496.cpp \
 	$(CORE_DIR)/src/hardware/mame/ymf262.cpp
 
+ifneq ($(WITH_FAKE_SDL), 1)
 ifeq ($(WITH_IPX), 1)
 SOURCES_CXX += \
 	$(CORE_DIR)/src/hardware/ipx.cpp \
 	$(CORE_DIR)/src/hardware/ipxserver.cpp
+endif
 endif
 
 SOURCES_C := \

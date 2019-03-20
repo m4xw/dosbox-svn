@@ -67,9 +67,20 @@
 #endif
 #endif
 
+#ifdef WITH_FAKE_SDL
+bool startup_state_capslock;
+bool startup_state_numlock;
+#endif
+
+#ifdef HAVE_LIBNX
+#include <switch.h>
+extern "C" Jit dynarec_jit;
+#endif
+
 cothread_t mainThread;
 cothread_t emuThread;
 
+bool autofire;
 bool dosbox_initialiazed = false;
 bool midi_enable = false;
 bool fast_forward = false;
@@ -87,8 +98,6 @@ SVGACards svgaCard = SVGA_None;
 enum { CDROM_USE_SDL, CDROM_USE_ASPI, CDROM_USE_IOCTL_DIO, CDROM_USE_IOCTL_DX, CDROM_USE_IOCTL_MCI };
 
 /* input variables */
-int current_port;
-bool autofire;
 bool gamepad[16]; /* true means gamepad, false means joystick */
 bool connected[16];
 bool emulated_mouse;
@@ -1110,6 +1119,10 @@ void retro_deinit(void)
         co_delete(emuThread);
         emuThread = 0;
     }
+
+#ifdef HAVE_LIBNX
+	jitClose(&dynarec_jit);
+#endif
 }
 
 bool retro_load_game(const struct retro_game_info *game)
