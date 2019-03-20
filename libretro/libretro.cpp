@@ -74,6 +74,9 @@ bool dosbox_initialiazed = false;
 bool midi_enable = false;
 bool fast_forward = false;
 
+unsigned deadzone;
+unsigned sensitivity = 8;
+
 Bit32u MIXER_RETRO_GetFrequency();
 void MIXER_CallBack(void * userdata, uint8_t *stream, int len);
 
@@ -466,62 +469,64 @@ static struct retro_disk_control_callback disk_interface = {
 };
 
 struct retro_variable vars[] = {
-    { "dosbox_svn_use_options",           "Enable core-options (restart); true|false"},
-    { "dosbox_svn_adv_options",           "Enable advanced core-options (restart); false|true"},
-    { "dosbox_svn_machine_type",          "Emulated machine (restart); svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
-    { "dosbox_svn_memory_size",           "Memory size (restart); 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
+    { "dosbox_svn_use_options",             "Enable core-options (restart); true|false"},
+    { "dosbox_svn_adv_options",             "Enable advanced core-options (restart); false|true"},
+    { "dosbox_svn_machine_type",            "Emulated machine (restart); svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
+    { "dosbox_svn_memory_size",             "Memory size (restart); 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
-    { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
+    { "dosbox_svn_cpu_core",                "CPU core; auto|dynamic|normal|simple" },
 #else
-    { "dosbox_svn_cpu_core",              "CPU core; auto|normal|simple" },
+    { "dosbox_svn_cpu_core",                "CPU core; auto|normal|simple" },
 #endif
-    { "dosbox_svn_cpu_type",              "CPU type; auto|386|386_slow|486|486_slow|pentium_slow|386_prefetch" },
-    { "dosbox_svn_cpu_cycles_mode",       "CPU cycle mode; auto|fixed|max" },
-    { "dosbox_svn_cpu_cycles_multiplier", "CPU cycle multiplier; 1000|10000|100000|100" },
-    { "dosbox_svn_cpu_cycles",            "CPU cycles; 1|2|3|4|5|6|7|8|9" },
-    { "dosbox_svn_scaler",                "Video scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
-    { "dosbox_svn_joystick_timed",        "Joystick timed intervals; true|false" },
-    { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
-    { "dosbox_svn_sblaster_type",         "Sound Blaster type; sb16|sb1|sb2|sbpro1|sbpro2|gb|none" },
-    { "dosbox_svn_pcspeaker",             "Enable PC-Speaker; false|true" },
-    { "dosbox_svn_ipx",                   "Enable IPX over UDP; false|true" },
+    { "dosbox_svn_cpu_type",                "CPU type; auto|386|386_slow|486|486_slow|pentium_slow|386_prefetch" },
+    { "dosbox_svn_cpu_cycles_mode",         "CPU cycle mode; auto|fixed|max" },
+    { "dosbox_svn_cpu_cycles_multiplier",   "CPU cycle multiplier; 1000|10000|100000|100" },
+    { "dosbox_svn_cpu_cycles",              "CPU cycles; 1|2|3|4|5|6|7|8|9" },
+    { "dosbox_svn_scaler",                  "Video scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
+    { "dosbox_svn_joystick_timed",          "Joystick timed intervals; true|false" },
+    { "dosbox_svn_emulated_mouse",          "Gamepad emulated mouse; enable|disable" },
+    { "dosbox_svn_emulated_mouse_deadzone", "Gamepad emulated deadzone; 5%|10%|15%|20%|25%|30%|0%" },
+    { "dosbox_svn_sblaster_type",           "Sound Blaster type; sb16|sb1|sb2|sbpro1|sbpro2|gb|none" },
+    { "dosbox_svn_pcspeaker",               "Enable PC-Speaker; false|true" },
+    { "dosbox_svn_ipx",                     "Enable IPX over UDP; false|true" },
     { NULL, NULL },
 };
 
 struct retro_variable vars_advanced[] = {
-    { "dosbox_svn_use_options",           "Enable core-options (restart); true|false"},
-    { "dosbox_svn_adv_options",           "Enable advanced core-options (restart); false|true"},
-    { "dosbox_svn_machine_type",          "Emulated machine (restart); svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
-    { "dosbox_svn_memory_size",           "Memory size (restart); 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
+    { "dosbox_svn_use_options",             "Enable core-options (restart); true|false"},
+    { "dosbox_svn_adv_options",             "Enable advanced core-options (restart); false|true"},
+    { "dosbox_svn_machine_type",            "Emulated machine (restart); svga_s3|svga_et3000|svga_et4000|svga_paradise|vesa_nolfb|vesa_oldvbe|hercules|cga|tandy|pcjr|ega|vgaonly" },
+    { "dosbox_svn_memory_size",             "Memory size (restart); 16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|1|2|3|4|5|6|7|8|9|10|11|12|13|14|15" },
 #if defined(C_DYNREC) || defined(C_DYNAMIC_X86)
-    { "dosbox_svn_cpu_core",              "CPU core; auto|dynamic|normal|simple" },
+    { "dosbox_svn_cpu_core",                "CPU core; auto|dynamic|normal|simple" },
 #else
-    { "dosbox_svn_cpu_core",              "CPU core; auto|normal|simple" },
+    { "dosbox_svn_cpu_core",                "CPU core; auto|normal|simple" },
 #endif
-    { "dosbox_svn_cpu_type",              "CPU type; auto|386|386_slow|486|486_slow|pentium_slow|386_prefetch" },
-    { "dosbox_svn_cpu_cycles_mode",       "CPU cycle mode; auto|fixed|max" },
-    { "dosbox_svn_cpu_cycles_multiplier", "CPU cycle multiplier; 1000|10000|100000|100" },
-    { "dosbox_svn_cpu_cycles",            "CPU cycles; 1|2|3|4|5|6|7|8|9" },
+    { "dosbox_svn_cpu_type",                "CPU type; auto|386|386_slow|486|486_slow|pentium_slow|386_prefetch" },
+    { "dosbox_svn_cpu_cycles_mode",         "CPU cycle mode; auto|fixed|max" },
+    { "dosbox_svn_cpu_cycles_multiplier",   "CPU cycle multiplier; 1000|10000|100000|100" },
+    { "dosbox_svn_cpu_cycles",              "CPU cycles; 1|2|3|4|5|6|7|8|9" },
     { "dosbox_svn_cpu_cycles_multiplier_fine",
-                                          "CPU fine cycles multiplier; 100|1|10" },
-    { "dosbox_svn_cpu_cycles_fine",       "CPU fine cycles; 1|2|3|4|5|6|7|9" },
-    { "dosbox_svn_scaler",                "Video scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
-    { "dosbox_svn_use_native_refresh",    "Refresh rate switching; false|true"},
-    { "dosbox_svn_joystick_timed",        "Joystick timed intervals; true|false" },
-    { "dosbox_svn_emulated_mouse",        "Gamepad emulated mouse; enable|disable" },
-    { "dosbox_svn_sblaster_type",         "Sound Blaster type; sb16|sb1|sb2|sbpro1|sbpro2|gb|none" },
-    { "dosbox_svn_sblaster_base",         "Sound Blaster base address; 220|240|260|280|2a0|2c0|2e0|300" },
-    { "dosbox_svn_sblaster_irq",          "Sound Blaster IRQ; 5|7|9|10|11|12|3" },
-    { "dosbox_svn_sblaster_dma",          "Sound Blaster DMA; 1|3|5|6|7|0" },
-    { "dosbox_svn_sblaster_hdma",         "Sound Blaster High DMA; 7|0|1|3|5|6" },
-    { "dosbox_svn_sblaster_opl_mode",     "Sound Blaster OPL Mode; auto|cms|op12|dualop12|op13|op13gold|none" },
-    { "dosbox_svn_sblaster_opl_emu",      "Sound Blaster OPL Provider; default|compat|fast|mame" },
-    { "dosbox_svn_midi",                  "Enable MIDI passthrough; false|true" },
-    { "dosbox_svn_pcspeaker",             "Enable PC-Speaker; false|true" },
-    { "dosbox_svn_tandy",                 "Enable Tandy Sound System (restart); auto|on|off" },
-    { "dosbox_svn_disney",                "Enable Disney Sound Source (restart); false|true" },
+                                            "CPU fine cycles multiplier; 100|1|10" },
+    { "dosbox_svn_cpu_cycles_fine",         "CPU fine cycles; 1|2|3|4|5|6|7|9" },
+    { "dosbox_svn_scaler",                  "Video scaler; none|normal2x|normal3x|advmame2x|advmame3x|advinterp2x|advinterp3x|hq2x|hq3x|2xsai|super2xsai|supereagle|tv2x|tv3x|rgb2x|rgb3x|scan2x|scan3x" },
+    { "dosbox_svn_use_native_refresh",      "Refresh rate switching; false|true"},
+    { "dosbox_svn_joystick_timed",          "Joystick timed intervals; true|false" },
+    { "dosbox_svn_emulated_mouse",          "Gamepad emulated mouse; enable|disable" },
+    { "dosbox_svn_emulated_mouse_deadzone", "Gamepad emulated deadzone; 5%|10%|15%|20%|25%|30%|0%" },
+    { "dosbox_svn_sblaster_type",           "Sound Blaster type; sb16|sb1|sb2|sbpro1|sbpro2|gb|none" },
+    { "dosbox_svn_sblaster_base",           "Sound Blaster base address; 220|240|260|280|2a0|2c0|2e0|300" },
+    { "dosbox_svn_sblaster_irq",            "Sound Blaster IRQ; 5|7|9|10|11|12|3" },
+    { "dosbox_svn_sblaster_dma",            "Sound Blaster DMA; 1|3|5|6|7|0" },
+    { "dosbox_svn_sblaster_hdma",           "Sound Blaster High DMA; 7|0|1|3|5|6" },
+    { "dosbox_svn_sblaster_opl_mode",       "Sound Blaster OPL Mode; auto|cms|op12|dualop12|op13|op13gold|none" },
+    { "dosbox_svn_sblaster_opl_emu",        "Sound Blaster OPL Provider; default|compat|fast|mame" },
+    { "dosbox_svn_midi",                    "Enable MIDI passthrough; false|true" },
+    { "dosbox_svn_pcspeaker",               "Enable PC-Speaker; false|true" },
+    { "dosbox_svn_tandy",                   "Enable Tandy Sound System (restart); auto|on|off" },
+    { "dosbox_svn_disney",                  "Enable Disney Sound Source (restart); false|true" },
 #if defined(C_IPX)
-    { "dosbox_svn_ipx",                   "Enable IPX over UDP; false|true" },
+    { "dosbox_svn_ipx",                     "Enable IPX over UDP; false|true" },
 #endif
     { NULL, NULL },
 };
@@ -657,6 +662,17 @@ void check_variables()
             emulated_mouse = false;
 
         if (prev != emulated_mouse)
+            MAPPER_Init();
+    }
+
+    var.key = "dosbox_svn_emulated_mouse_deadzone";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        unsigned prev = deadzone;
+        deadzone = atoi(var.value);
+
+        if (prev != deadzone)
             MAPPER_Init();
     }
 
