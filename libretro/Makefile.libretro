@@ -185,6 +185,23 @@ else ifeq ($(platform), ps3)
 	CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
 	CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
 	AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
+else ifeq ($(platform), xbox1_msvc2003)
+	CFLAGS += -D__WIN32__
+	CXXFLAGS += -D__WIN32__
+	TARGET := $(TARGET_NAME)_libretro_xdk1.lib
+	MSVCBINDIRPREFIX = $(XDK)/xbox/bin/vc71
+	CC  = "$(MSVCBINDIRPREFIX)/CL.exe"
+	CXX  = "$(MSVCBINDIRPREFIX)/CL.exe"
+	LD   = "$(MSVCBINDIRPREFIX)/lib.exe"
+	export INCLUDE := $(XDK)/xbox/include
+	export LIB := $(XDK)/xbox/lib
+	PSS_STYLE :=2
+	CFLAGS   += -D_XBOX -D_XBOX1
+	CXXFLAGS += -D_XBOX -D_XBOX1
+	WITH_FAKE_SDL = 1
+	COMMONFLAGS += -DWITH_FAKE_SDL
+	STATIC_LINKING=1
+	HAS_GCC := 0
 else ifeq ($(platform), win)
 	COMMONFLAGS += -mno-ms-bitfields
 	TARGET := $(TARGET_NAME)_libretro.dll
