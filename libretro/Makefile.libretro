@@ -177,6 +177,14 @@ else ifeq ($(platform), emscripten)
 	LDFLAGS += -Wl,-Bstatic
 	WITH_FAKE_SDL = 1
 	COMMONFLAGS += -DEMSCRIPTEN -DWITH_FAKE_SDL
+else ifeq ($(platform), ps3)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).a
+	WITH_FAKE_SDL = 1
+	COMMONFLAGS += -mhard-float -D__POWERPC__ -D__ppc__ -DWORDS_BIGENDIAN=1 -DWITH_FAKE_SDL
+	STATIC_LINKING = 1
+	CC = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-gcc.exe
+	CXX = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-g++.exe
+	AR = $(CELL_SDK)/host-win32/ppu/bin/ppu-lv2-ar.exe
 else ifeq ($(platform), win)
 	COMMONFLAGS += -mno-ms-bitfields
 	TARGET := $(TARGET_NAME)_libretro.dll
