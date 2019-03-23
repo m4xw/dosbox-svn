@@ -141,7 +141,7 @@ else ifeq ($(platform), ctr)
 	COMMONFLAGS += -march=armv6k -mtune=mpcore -mfloat-abi=hard
 	COMMONFLAGS += -mword-relocations
 	COMMONFLAGS += -fomit-frame-pointer -fstrict-aliasing -ffast-math
-	COMMONFLAGS += -DDISABLE_EXCEPTIONS -DWITH_FAKE_SDL
+	COMMONFLAGS += -DDISABLE_EXCEPTIONS -DWITH_FAKE_SDL -fpermissive
 	STATIC_LINKING = 1
 else ifeq ($(platform), wii)
 	TARGET := $(TARGET_NAME)_libretro_$(platform).a

@@ -528,7 +528,7 @@ struct retro_variable vars_advanced[] = {
     { "dosbox_svn_sblaster_irq",            "Sound Blaster IRQ; 5|7|9|10|11|12|3" },
     { "dosbox_svn_sblaster_dma",            "Sound Blaster DMA; 1|3|5|6|7|0" },
     { "dosbox_svn_sblaster_hdma",           "Sound Blaster High DMA; 7|0|1|3|5|6" },
-    { "dosbox_svn_sblaster_opl_mode",       "Sound Blaster OPL Mode; auto|cms|op12|dualop12|op13|op13gold|none" },
+    { "dosbox_svn_sblaster_opl_mode",       "Sound Blaster OPL Mode; auto|cms|opl2|dualopl2|opl3|opl3gold|none" },
     { "dosbox_svn_sblaster_opl_emu",        "Sound Blaster OPL Provider; default|compat|fast|mame" },
     { "dosbox_svn_midi",                    "Enable MIDI passthrough; false|true" },
     { "dosbox_svn_pcspeaker",               "Enable PC-Speaker; false|true" },
