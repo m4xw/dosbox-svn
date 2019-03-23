@@ -15,7 +15,9 @@
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
+#ifndef VITA
 #include <memory.h>
+#endif
 
 #if C_DEBUG
 #include <stdio.h>

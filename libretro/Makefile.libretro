@@ -123,7 +123,7 @@ else ifeq ($(platform), vita)
 	AR = arm-vita-eabi-ar$(EXE_EXT)
 	WITH_DYNAREC = arm
 	WITH_FAKE_SDL = 1
-	COMMONFLAGS += -DVITA -DWORDS_BIGENDIAN
+	COMMONFLAGS += -DVITA -DWORDS_BIGENDIAN -DWITH_FAKE_SDL
 	COMMONFLAGS += -mthumb -mcpu=cortex-a9 -mfloat-abi=hard -ftree-vectorize -ffast-math -fsingle-precision-constant -funroll-loops
 	COMMONFLAGS += -mword-relocations
 	COMMONFLAGS += -fno-optimize-sibling-calls

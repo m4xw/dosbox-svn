@@ -23,6 +23,11 @@
 #include <time.h>
 #include <errno.h>
 
+#ifdef VITA
+#include <psp2/io/stat.h>
+#include <psp2/io/fcntl.h>
+#endif
+
 #include "dosbox.h"
 #include "dos_inc.h"
 #include "drives.h"
@@ -308,6 +313,8 @@ bool localDrive::MakeDir(char * dir) {
 	CROSS_FILENAME(newdir);
 #if defined (WIN32)						/* MS Visual C++ */
 	int temp=mkdir(dirCache.GetExpandName(newdir));
+#elif defined(VITA)
+	int temp=sceIoMkdir(dirCache.GetExpandName(newdir), 0777);
 #else
 	int temp=mkdir(dirCache.GetExpandName(newdir),0700);
 #endif
@@ -321,7 +328,11 @@ bool localDrive::RemoveDir(char * dir) {
 	strcpy(newdir,basedir);
 	strcat(newdir,dir);
 	CROSS_FILENAME(newdir);
+#if defined (VITA)
+	int temp=sceIoRmdir(dirCache.GetExpandName(newdir));
+#else
 	int temp=rmdir(dirCache.GetExpandName(newdir));
+#endif
 	if (temp==0) dirCache.DeleteEntry(newdir,true);
 	return (temp==0);
 }
@@ -350,12 +361,16 @@ bool localDrive::Rename(char * oldname,char * newname) {
 	strcat(newold,oldname);
 	CROSS_FILENAME(newold);
 	dirCache.ExpandName(newold);
-	
+
 	char newnew[CROSS_LEN];
 	strcpy(newnew,basedir);
 	strcat(newnew,newname);
 	CROSS_FILENAME(newnew);
+#ifdef VITA
+	int temp=sceIoRename(newold,dirCache.GetExpandName(newnew));
+#else
 	int temp=rename(newold,dirCache.GetExpandName(newnew));
+#endif
 	if (temp==0) dirCache.CacheOut(newnew);
 	return (temp==0);
 
@@ -458,7 +473,11 @@ bool localFile::Write(Bit8u * data,Bit16u * size) {
 	if (last_action==READ) fseek(fhandle,ftell(fhandle),SEEK_SET);
 	last_action=WRITE;
 	if(*size==0){  
+#ifdef VITA
         return (!ftruncate(fileno(fhandle),ftell(fhandle)));
+#else
+        return true;
+#endif
     }
     else 
     {

@@ -22,7 +22,9 @@
 #include <stddef.h>
 #include "dosbox.h"
 #include "cpu.h"
+#ifndef VITA
 #include "memory.h"
+#endif
 #include "debug.h"
 #include "mapper.h"
 #include "setup.h"
