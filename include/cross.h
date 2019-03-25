@@ -36,9 +36,7 @@
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #else										/* LINUX / GCC */
-#if !defined(VITA)
 #include <dirent.h>
-#endif
 #include <unistd.h>
 #define LONGTYPE(a) a##LL
 #endif
@@ -93,18 +91,10 @@ typedef struct dir_struct {
 #else
 
 //#include <sys/types.h> //Included above
-#if !defined(VITA)
 #include <dirent.h>
-#else
-#include <retro_dirent.h>
-#endif
 
 typedef struct dir_struct { 
-#ifdef VITA
-	RDIR*  dir;
-#else
 	DIR*  dir;
-#endif
 	char base_path[CROSS_LEN];
 } dir_information;
 

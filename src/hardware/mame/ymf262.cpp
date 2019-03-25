@@ -55,6 +55,10 @@ differences between OPL2 and OPL3 shown in datasheets:
 
 */
 
+#if defined(VITA)
+#include <string.h>
+#endif
+
 #include "emu.h"
 #include "ymf262.h"
 

@@ -18,7 +18,6 @@
 
 #ifdef __LIBRETRO__
 #ifdef VITA
-#include <retro_dirent.h>
 #include <psp2/io/stat.h>
 #endif
 #endif
@@ -237,6 +236,15 @@ bool read_directory_next(dir_information* dirp, char* entry_name, bool& is_direc
 //	safe_strncpy(entry_name,dentry->d_name,(FILENAME_MAX<MAX_PATH)?FILENAME_MAX:MAX_PATH);	// [include stdio.h], maybe pathconf()
 	safe_strncpy(entry_name,dentry->d_name,CROSS_LEN);
 
+#if defined(VITA)
+	if(SCE_S_ISDIR(dentry->d_stat.st_mode)){
+		is_directory = true;
+		return true;
+	} else if(SCE_S_ISREG(dentry->d_stat.st_mode)){
+		is_directory = true;
+                return true;
+	}
+#else
 #ifdef DIRENT_HAS_D_TYPE
 	if(dentry->d_type == DT_DIR) {
 		is_directory = true;
@@ -245,6 +253,7 @@ bool read_directory_next(dir_information* dirp, char* entry_name, bool& is_direc
 		is_directory = false;
 		return true;
 	}
+#endif
 #endif
 
 	//Maybe only for DT_UNKNOWN if DIRENT_HAD_D_TYPE..

@@ -126,7 +126,7 @@ else ifeq ($(platform), vita)
 	COMMONFLAGS += -DVITA -DWORDS_BIGENDIAN -DWITH_FAKE_SDL
 	COMMONFLAGS += -mthumb -mcpu=cortex-a9 -mfloat-abi=hard -ftree-vectorize -ffast-math -fsingle-precision-constant -funroll-loops
 	COMMONFLAGS += -mword-relocations
-	COMMONFLAGS += -fno-optimize-sibling-calls
+	COMMONFLAGS += -fno-optimize-sibling-calls -fpermissive
 	STATIC_LINKING = 1
 else ifeq ($(platform), ctr)
 	TARGET := $(TARGET_NAME)_libretro_$(platform).a
