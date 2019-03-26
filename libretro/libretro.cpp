@@ -230,7 +230,11 @@ bool mount_overlay_filesystem(char drive, const char* path)
     {
         if (log_cb)
             log_cb(RETRO_LOG_INFO, "[dosbox] creating save directory %s\n", path);
+#if !defined(__MACOSX__)
         if (mkdir(path) == -1)
+#else
+        if (mkdir(path, 0700) == -1)
+#endif
         {
             if (log_cb)
                 log_cb(RETRO_LOG_INFO, "[dosbox] error creating save directory %s\n", path);
@@ -884,7 +888,7 @@ void check_variables()
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         update_dosbox_variable("joystick", "timed", var.value);
 
-#if defined(IPX)
+#if defined(C_IPX)
     var.key = "dosbox_svn_ipx";
     var.value = NULL;
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
