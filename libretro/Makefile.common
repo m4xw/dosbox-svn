@@ -53,6 +53,7 @@ SOURCES_CXX := \
 	$(CORE_DIR)/src/dos/drive_iso.cpp \
 	$(CORE_DIR)/src/dos/drive_local.cpp \
 	$(CORE_DIR)/src/dos/drive_virtual.cpp \
+    $(CORE_DIR)/src/dos/drive_overlay.cpp \
 	$(CORE_DIR)/src/dos/drives.cpp \
 	$(CORE_DIR)/src/dosbox.cpp \
 	$(CORE_DIR)/src/fpu/fpu.cpp \
